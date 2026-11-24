@@ -43,7 +43,7 @@ async function callOpenRouterFallback(promptText: string, imageBase64?: string):
 
   if (!res.ok) return null;
   const data = await res.json();
-  const raw = data?.choices?.?.message?.content || '';
+  const raw = data?.choices?.[0]?.message?.content || '';
   return raw.replace(/```json|```/g, '').trim();
 }
 
@@ -180,7 +180,7 @@ export const api = {
           },
         },
       });
-      const inlineData = res.candidates?.?.content?.parts?.?.inlineData;
+      const inlineData = res.candidates?.[0]?.content?.parts?.[0]?.inlineData;
       if (inlineData?.data) {
         const mime = inlineData.mimeType || 'audio/L16;rate=24000';
         if (mime.includes('L16') || mime.includes('pcm')) {
