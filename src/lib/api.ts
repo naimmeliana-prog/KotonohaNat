@@ -17,7 +17,75 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 }
 
-// Convierte el audio PCM crudo (L16 24kHz) de Gemini TTS en un archivo WAV reproducible
+async function callOpenRouterFallback(promptText: string, imageBase64?: string): Promise<string | null> {
+  const orKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  if (!orKey) return null;
+
+  const content: any[] = [{ type: 'text', text: promptText }];
+  if (imageBase64) {
+    content.push({
+      type: 'image_url',
+      image_url: { url: 'data:image/png;base64,' + imageBase64 },
+    });
+  }
+
+  const res = await fetch('https://openrouter.ai', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + orKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: imageBase64 ? 'google/gemma-3-27b-it:free' : 'meta-llama/llama-3.3-70b-instruct:free',
+      messages: [{ role: 'user', content }],
+    }),
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  const raw = data?.choices?.?.message?.content || '';
+  return raw.replace(/```json|```/g, '').trim();
+}
+
+async function generateWithRetry(
+  contents: any,
+  fallbackInfo?: { promptText: string; imageBase64?: string }
+): Promise<string> {
+  const ai = getAiClient();
+
+  // 3 intentos en gemini-3.8-flash con pausa progresiva
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents,
+        config: { responseMimeType: 'application/json' },
+      });
+      if (res.text) return res.text;
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      const isBusy = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('429');
+      if (isBusy && i < 2) {
+        await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        continue;
+      }
+      if (!isBusy) {
+        throw new Error(msg);
+      }
+    }
+  }
+
+  // Si Gemini está saturado (503) y hay clave de OpenRouter configurada, usa OpenRouter gratis
+  if (fallbackInfo) {
+    const orResult = await callOpenRouterFallback(fallbackInfo.promptText, fallbackInfo.imageBase64);
+    if (orResult) return orResult;
+  }
+
+  throw new Error(
+    'Los servidores gratuitos de IA están saturados ahora mismo. Inténtalo de nuevo en unos segundos.'
+  );
+}
+
 function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
   const binary = atob(pcmBase64);
   const pcmLength = binary.length;
@@ -35,8 +103,8 @@ function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
   writeString(8, 'WAVE');
   writeString(12, 'fmt ');
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // Mono
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, sampleRate * 2, true);
   view.setUint16(32, 2, true);
@@ -55,47 +123,6 @@ function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
     wavBinary += String.fromCharCode(fullBytes[i]);
   }
   return btoa(wavBinary);
-}
-
-async function generateWithRetry(contents: any): Promise<string> {
-  const ai = getAiClient();
-  const candidateModels = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-3.8-flash',
-];
-
-  let lastError = 'No se pudo conectar con la IA.';
-
-  for (const modelName of candidateModels) {
-    try {
-      const res = await ai.models.generateContent({
-        model: modelName,
-        contents,
-        config: { responseMimeType: 'application/json' },
-      });
-      if (res.text) return res.text;
-    } catch (err: any) {
-      const msg = String(err?.message || err);
-      lastError = msg;
-      const shouldFallback =
-        msg.includes('503') ||
-        msg.includes('UNAVAILABLE') ||
-        msg.includes('429') ||
-        msg.includes('404') ||
-        msg.includes('NOT_FOUND');
-
-      if (shouldFallback) {
-        await new Promise((r) => setTimeout(r, 600));
-        continue;
-      }
-      throw new Error(msg);
-    }
-  }
-
-  throw new Error(
-    'Los servidores gratuitos de IA están saturados ahora mismo. Inténtalo de nuevo en unos segundos. (' + lastError.slice(0, 80) + ')'
-  );
 }
 
 type VoiceProfile = 'Kore' | 'Puck' | 'Zephyr';
@@ -153,12 +180,12 @@ export const api = {
           },
         },
       });
-      const inlineData = res.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      const inlineData = res.candidates?.?.content?.parts?.?.inlineData;
       if (inlineData?.data) {
         const mime = inlineData.mimeType || 'audio/L16;rate=24000';
         if (mime.includes('L16') || mime.includes('pcm')) {
           const rateMatch = mime.match(/rate=(\d+)/);
-          const rate = rateMatch ? Number(rateMatch[1]) : 24000;
+          const rate = rateMatch ? Number(rateMatch) : 24000;
           return {
             audioBase64: pcmBase64ToWavBase64(inlineData.data, rate),
             mimeType: 'audio/wav',
@@ -170,7 +197,7 @@ export const api = {
         };
       }
     } catch {
-      // Respaldo automático al navegador si falla
+      // Respaldo automático al navegador
     }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
@@ -212,15 +239,16 @@ export const api = {
 
     const parts: any[] = [{ text: prompt }];
     if (payload.audioBase64 && payload.audioMimeType) {
-  const cleanMime = payload.audioMimeType.split(';');
-  parts.unshift({
-    inlineData: {
-      data: payload.audioBase64,
-      mimeType: cleanMime,
-    },
-  });
-}
-    const raw = await generateWithRetry(parts);
+      const cleanMime = String(payload.audioMimeType).split(';').trim() || 'audio/webm';
+      parts.unshift({
+        inlineData: {
+          data: payload.audioBase64,
+          mimeType: cleanMime,
+        },
+      });
+    }
+
+    const raw = await generateWithRetry(parts, payload.userText ? { promptText: prompt } : undefined);
     const parsed = JSON.parse(raw);
     lastSpokenText = parsed.senseiReplyJa || '';
     lastPace = payload.pace;
@@ -240,61 +268,61 @@ export const api = {
     uiLang?: UiLanguage;
   }): Promise<WritingEvaluation> => {
     const langText = payload.uiLang === 'ja' ? 'japonés' : 'español';
-    const cleanBase64 = payload.imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    const cleanBase64 = payload.imageBase64.replace('data:image/png;base64,', '').replace('data:image/jpeg;base64,', '');
+    const promptText =
+      'Evalúa este trazo manuscrito del carácter ' +
+      payload.characterType +
+      ' "' +
+      payload.targetCharacter +
+      '". Responde ÚNICAMENTE en JSON válido en ' +
+      langText +
+      ' con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }';
 
-    const raw = await generateWithRetry([
-      { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
-      {
-        text:
-          'Evalúa este trazo manuscrito del carácter ' +
-          payload.characterType +
-          ' "' +
-          payload.targetCharacter +
-          '". Responde en ' +
-          langText +
-          ' en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }',
-      },
-    ]);
+    const raw = await generateWithRetry(
+      [
+        { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
+        { text: promptText },
+      ],
+      { promptText, imageBase64: cleanBase64 }
+    );
 
     return JSON.parse(raw);
   },
 
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
-    const raw = await generateWithRetry(
+    const promptText =
       'Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ' +
-        uiLang +
-        '). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }'
-    );
-    return JSON.parse(raw);
-  },
-
-  bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise<BridgeExplanation> => {
-    const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
-    const raw = await generateWithRetry(
-      'Analiza este mensaje de intercambio de idiomas: "' +
-        messageText +
-        '". Explica en ' +
-        targetLang +
-        '. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }'
-    );
-    return JSON.parse(raw);
-  },
-
-  bridgeReplies: async (
-    messageText: string,
-    promptContext: string,
-    uiLang: UiLanguage = 'es'
-  ): Promise<{ suggestions: BridgeReplySuggestion[] }> => {
-    const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
-    const raw = await generateWithRetry(
-      'Contexto del tema: "' +
-        promptContext +
-        '". Mensaje recibido: "' +
-        messageText +
+      uiLang +
+      '). Devuelve ÚNICAMENTE JSON: { "promptEs": string, "promptJa": string, "topicTag": string }';
+const raw = await generateWithRetry(promptText, { promptText });
+return JSON.parse(raw);
+},
+bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise => {
+const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
+const promptText =
+'Analiza este mensaje de intercambio de idiomas: "' +
+messageText +
+'". Explica en ' +
+targetLang +
+'. Devuelve ÚNICAMENTE JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }';
+const raw = await generateWithRetry(promptText, { promptText });
+return JSON.parse(raw);
+},
+bridgeReplies: async (
+messageText: string,
+promptContext: string,
+uiLang: UiLanguage = 'es'
+): Promise<{ suggestions: BridgeReplySuggestion[] }> => {
+const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
+const promptText =
+'Contexto del tema: "' +
+promptContext +
+'". Mensaje recibido: "' +
+messageText +
 '". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ' +
 targetLang +
-'. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }'
-);
+'. Devuelve ÚNICAMENTE JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }';
+const raw = await generateWithRetry(promptText, { promptText });
 return JSON.parse(raw);
 },
 adminTelemetry: async (): Promise =>
