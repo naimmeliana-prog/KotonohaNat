@@ -60,11 +60,10 @@ function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
 async function generateWithRetry(contents: any): Promise<string> {
   const ai = getAiClient();
   const candidateModels = [
-    'gemini-3.8-flash',
-    'gemini-2.5-pro',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-  ];
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-3.8-flash',
+];
 
   let lastError = 'No se pudo conectar con la IA.';
 
@@ -213,14 +212,14 @@ export const api = {
 
     const parts: any[] = [{ text: prompt }];
     if (payload.audioBase64 && payload.audioMimeType) {
-      parts.unshift({
-        inlineData: {
-          data: payload.audioBase64,
-          mimeType: payload.audioMimeType,
-        },
-      });
-    }
-
+  const cleanMime = payload.audioMimeType.split(';');
+  parts.unshift({
+    inlineData: {
+      data: payload.audioBase64,
+      mimeType: cleanMime,
+    },
+  });
+}
     const raw = await generateWithRetry(parts);
     const parsed = JSON.parse(raw);
     lastSpokenText = parsed.senseiReplyJa || '';
