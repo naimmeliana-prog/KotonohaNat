@@ -747,7 +747,12 @@ export function AdminView({ user, darkMode, onOpenAuth, onContentUpdated }: Admi
               </p>
               <div className="divide-y divide-[#ECE8DF] dark:divide-[#262C36] max-h-44 overflow-y-auto">
                 {dictEntries
-                  .filter((d) => !d.id.startsWith('seed-dict-'))
+                  .filter(
+                    (d) =>
+                      !d.id.startsWith('seed-dict-') &&
+                      !d.id.startsWith('rui-') &&
+                      !d.id.startsWith('feri-')
+                  )
                   .slice(0, 12)
                   .map((d) => (
                     <div key={d.id} className="py-2 flex items-center justify-between gap-3 text-xs">

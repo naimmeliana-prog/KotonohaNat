@@ -252,15 +252,20 @@ export interface TranslationTree {
     searchPlaceholder: string;
     filterSourceLabel: string;
     allSources: string;
+    filterCategoryLabel: string;
+    allCategories: string;
     searching: string;
     emptyResult: string;
     resultsCount: string;
+    showingCount: string;
+    loadMoreBtn: string;
     listen: string;
     inYourSrs: string;
     addToSrs: string;
     loadError: string;
     audioError: string;
     srsError: string;
+    categories: Record<string, string>;
   };
   community: {
     eyebrow: string;
@@ -762,18 +767,47 @@ export const TRANSLATIONS: Record<UiLanguage, TranslationTree> = {
       eyebrow: 'Biblioteca léxica unificada · {count} diccionarios integrados',
       title: 'Diccionarios Japonés — Español',
       allLevels: 'Todos',
-      searchPlaceholder: 'Busca por kanji, hiragana, romaji o español (ej. 桜, taberu, partícula...)',
+      searchPlaceholder: 'Busca en japonés, romaji o español (ej. 桜, gakko, árbol, partícula...)',
       filterSourceLabel: 'Filtrar por diccionario',
       allSources: 'Todos los diccionarios',
+      filterCategoryLabel: 'Filtrar por categoría',
+      allCategories: 'Todas las categorías',
       searching: 'Buscando entradas...',
       emptyResult: 'No se encontraron resultados para "{q}".',
       resultsCount: '{count} entradas encontradas',
+      showingCount: 'Mostrando {shown} de {total} entradas',
+      loadMoreBtn: 'Mostrar {count} entradas más',
       listen: 'Escuchar',
       inYourSrs: 'En tu SRS',
       addToSrs: 'Añadir a SRS',
       loadError: 'Error consultando los diccionarios.',
       audioError: 'No se pudo sintetizar la pronunciación.',
       srsError: 'No se pudo añadir la entrada al mazo SRS.',
+      categories: {
+        vocabulario_basico: 'Vocabulario básico',
+        jlpt_n4_n3: 'Vocabulario JLPT N4–N3',
+        gairaigo: 'Extranjerismos (Gairaigo)',
+        cultura: 'Cultura y sociedad',
+        expresiones: 'Expresiones cotidianas',
+        animales: 'Animales y fauna',
+        cuerpo_humano: 'Cuerpo humano',
+        vegetales_alimentos: 'Alimentos y plantas',
+        deportes: 'Deportes',
+        adjetivos_yaka: 'Adjetivos -yaka / descriptivos',
+        yoji_jukugo: 'Modismos de 4 kanji (Yojijukugo)',
+        refranes: 'Refranes y proverbios',
+        artes_marciales: 'Artes marciales',
+        vocabulario_general: 'Vocabulario general',
+        vocabulario_avanzado: 'Vocabulario avanzado',
+        feri_gendai: 'Español → Japonés (Feri–Gendai)',
+        partículas: 'Partículas',
+        gramática: 'Gramática',
+        verbos: 'Verbos',
+        saludos: 'Saludos',
+        viajes: 'Viajes',
+        comida: 'Comida',
+        onomatopeya: 'Onomatopeyas',
+      },
     },
     community: {
       eyebrow: 'Acceso privado con solo usuario y contraseña · Sin correo ni datos personales',
@@ -1297,18 +1331,47 @@ export const TRANSLATIONS: Record<UiLanguage, TranslationTree> = {
       eyebrow: '日西統合辞書ライブラリ · {count} 種類の教材収録',
       title: '日本語 — スペイン語 辞書',
       allLevels: 'すべて',
-      searchPlaceholder: '漢字、ひらがな、ローマ字、スペイン語で検索（例: 桜, taberu, は...）',
+      searchPlaceholder: '日本語、ローマ字、スペイン語で検索（例: 桜, gakko, arbol, は...）',
       filterSourceLabel: '出典で絞り込む',
       allSources: 'すべての出典',
+      filterCategoryLabel: 'カテゴリーで絞り込む',
+      allCategories: 'すべてのカテゴリー',
       searching: '検索中...',
       emptyResult: '「{q}」に一致する項目が見つかりませんでした。',
       resultsCount: '{count} 件の見出し語',
+      showingCount: '{total} 件中 {shown} 件を表示',
+      loadMoreBtn: 'さらに {count} 件を表示',
       listen: '聞く',
       inYourSrs: 'SRS済み',
       addToSrs: 'SRSに追加',
       loadError: '辞書の読み込み中にエラーが発生しました。',
       audioError: '音声を生成できませんでした。',
       srsError: 'SRSカードに追加できませんでした。',
+      categories: {
+        vocabulario_basico: '基礎語彙',
+        jlpt_n4_n3: 'JLPT N4–N3 語彙',
+        gairaigo: '外来語（カタカナ）',
+        cultura: '文化・社会',
+        expresiones: '日常表現',
+        animales: '動物・生き物',
+        cuerpo_humano: '身体の部位',
+        vegetales_alimentos: '食べ物・植物',
+        deportes: 'スポーツ',
+        adjetivos_yaka: '「〜やか」形容動詞',
+        yoji_jukugo: '四字熟語',
+        refranes: 'ことわざ・慣用句',
+        artes_marciales: '武道・格闘技',
+        vocabulario_general: '一般語彙',
+        vocabulario_avanzado: '上級語彙',
+        feri_gendai: '西和辞典（Feri–Gendai）',
+        partículas: '助詞',
+        gramática: '文法',
+        verbos: '動詞',
+        saludos: '挨拶',
+        viajes: '旅行',
+        comida: '食事',
+        onomatopeya: 'オノマトペ',
+      },
     },
     community: {
       eyebrow: 'ニックネーム＆パスワードだけで参加OK · 個人情報不要',

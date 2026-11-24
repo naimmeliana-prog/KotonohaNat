@@ -620,50 +620,147 @@ export async function fetchLessons(level?: JlptLevel): Promise<{ lessons: Lesson
   }
 }
 
+let staticDictionaryCache: DictionaryEntry[] | null = null;
+let staticDictionaryPromise: Promise<DictionaryEntry[]> | null = null;
+
+function normalizeSearchText(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+async function loadStaticDictionaries(): Promise<DictionaryEntry[]> {
+  if (staticDictionaryCache) return staticDictionaryCache;
+  if (!staticDictionaryPromise) {
+    staticDictionaryPromise = fetch('/data/dictionaries.json')
+      .then(async (res) => {
+        if (!res.ok) return [];
+        const json = (await res.json()) as Partial<DictionaryEntry>[];
+        if (!Array.isArray(json)) return [];
+        const normalized: DictionaryEntry[] = json
+          .filter((item) => Boolean(item?.word && item?.meaningEs))
+          .map((item, idx) => ({
+            id: String(item.id || `static-dict-${idx + 1}`),
+            word: String(item.word || ''),
+            reading: String(item.reading || item.word || ''),
+            romaji: String(item.romaji || ''),
+            meaningEs: String(item.meaningEs || ''),
+            partOfSpeech: String(item.partOfSpeech || 'vocabulario'),
+            jlptLevel: (item.jlptLevel as JlptLevel) || 'N4',
+            exampleJa: String(item.exampleJa || ''),
+            exampleReading: String(item.exampleReading || ''),
+            exampleEs: String(item.exampleEs || ''),
+            dictionarySource: String(item.dictionarySource || 'Diccionario'),
+            tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+            published: true,
+          }));
+        staticDictionaryCache = normalized;
+        return normalized;
+      })
+      .catch(() => {
+        staticDictionaryPromise = null;
+        return [];
+      });
+  }
+  return staticDictionaryPromise;
+}
+
+const ORDERED_DICTIONARY_TAGS = [
+  'vocabulario_basico',
+  'jlpt_n4_n3',
+  'gairaigo',
+  'cultura',
+  'expresiones',
+  'animales',
+  'cuerpo_humano',
+  'vegetales_alimentos',
+  'deportes',
+  'adjetivos_yaka',
+  'yoji_jukugo',
+  'refranes',
+  'artes_marciales',
+  'vocabulario_general',
+  'vocabulario_avanzado',
+  'feri_gendai',
+  'partículas',
+  'gramática',
+  'verbos',
+  'saludos',
+  'viajes',
+  'comida',
+  'onomatopeya',
+];
+
 export async function fetchDictionaryEntries(params: {
   q?: string;
   level?: JlptLevel;
   source?: string;
-}): Promise<{ entries: DictionaryEntry[]; sources: string[]; fromFirestore: boolean }> {
+  tag?: string;
+}): Promise<{ entries: DictionaryEntry[]; sources: string[]; tags: string[]; fromFirestore: boolean }> {
   try {
     const q = query(collection(db, 'dictionaryEntries'), where('published', '==', true));
-    const snap = await getDocs(q);
+    const [snap, staticEntries] = await Promise.all([getDocs(q), loadStaticDictionaries()]);
     const fromFirestore = !snap.empty;
-    const raw: DictionaryEntry[] = fromFirestore
-      ? snap.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            word: String(data.word),
-            reading: String(data.reading),
-            romaji: String(data.romaji || ''),
-            meaningEs: String(data.meaningEs),
-            partOfSpeech: String(data.partOfSpeech || 'sustantivo'),
-            jlptLevel: (data.jlptLevel as JlptLevel) || 'N5',
-            exampleJa: String(data.exampleJa || ''),
-            exampleReading: String(data.exampleReading || ''),
-            exampleEs: String(data.exampleEs || ''),
-            dictionarySource: String(data.dictionarySource || 'Diccionario'),
-            tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
-            published: true,
-          };
-        })
-      : FALLBACK_DICTIONARY;
+    const firestoreEntries: DictionaryEntry[] = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        word: String(data.word),
+        reading: String(data.reading),
+        romaji: String(data.romaji || ''),
+        meaningEs: String(data.meaningEs),
+        partOfSpeech: String(data.partOfSpeech || 'sustantivo'),
+        jlptLevel: (data.jlptLevel as JlptLevel) || 'N5',
+        exampleJa: String(data.exampleJa || ''),
+        exampleReading: String(data.exampleReading || ''),
+        exampleEs: String(data.exampleEs || ''),
+        dictionarySource: String(data.dictionarySource || 'Diccionario'),
+        tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+        published: true,
+      };
+    });
+
+    const seenKeys = new Set<string>();
+    const raw: DictionaryEntry[] = [];
+    for (const item of [...firestoreEntries, ...FALLBACK_DICTIONARY, ...staticEntries]) {
+      const dedupeKey = `${item.word}|${item.reading}|${item.dictionarySource}`;
+      if (seenKeys.has(dedupeKey)) continue;
+      seenKeys.add(dedupeKey);
+      raw.push(item);
+    }
 
     const sources = Array.from(new Set(raw.map((e) => e.dictionarySource))).sort();
-    const search = (params.q || '').trim().toLowerCase();
+    const presentTags = new Set<string>();
+    for (const e of raw) {
+      for (const tg of e.tags) {
+        if (tg) presentTags.add(tg);
+      }
+    }
+    const tags = ORDERED_DICTIONARY_TAGS.filter((tg) => presentTags.has(tg));
+
+    const search = normalizeSearchText((params.q || '').trim());
+    const altRomajiSearch =
+      search && /^[a-z0-9\s\-~']+$/.test(search)
+        ? search.replace(/ou/g, 'o').replace(/uu/g, 'u')
+        : '';
 
     const filtered = raw.filter((e) => {
       if (params.level && e.jlptLevel !== params.level) return false;
       if (params.source && e.dictionarySource !== params.source) return false;
+      if (params.tag && !e.tags.includes(params.tag)) return false;
       if (search) {
-        const hay = `${e.word} ${e.reading} ${e.romaji} ${e.meaningEs} ${e.tags.join(' ')}`.toLowerCase();
-        if (!hay.includes(search)) return false;
+        const hay = normalizeSearchText(
+          `${e.word} ${e.reading} ${e.romaji} ${e.meaningEs} ${e.partOfSpeech} ${e.exampleJa} ${e.exampleEs} ${e.tags.join(' ')}`
+        );
+        if (!hay.includes(search) && !(altRomajiSearch && hay.includes(altRomajiSearch))) {
+          return false;
+        }
       }
       return true;
     });
 
-    return { entries: filtered, sources, fromFirestore };
+    return { entries: filtered, sources, tags, fromFirestore };
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, 'dictionaryEntries');
   }
