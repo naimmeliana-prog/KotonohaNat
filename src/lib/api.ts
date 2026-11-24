@@ -17,33 +17,47 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 }
 
-async function generateWithRetry(contents: any, retries = 2): Promise<string> {
+async function generateWithRetry(contents: any): Promise<string> {
   const ai = getAiClient();
-  const models = ['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash'];
+  // Rota entre distintos modelos gratuitos si alguno devuelve 503 (saturado) o 404
+  const candidateModels = [
+    'gemini-3.8-flash',
+    'gemini-2.5-pro',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+  ];
 
-  for (let i = 0; i <= retries; i++) {
+  let lastError = 'No se pudo conectar con la IA.';
+
+  for (const modelName of candidateModels) {
     try {
       const res = await ai.models.generateContent({
-        model: models[i] || 'gemini-3.8-flash',
+        model: modelName,
         contents,
         config: { responseMimeType: 'application/json' },
       });
-      return res.text || '{}';
+      if (res.text) return res.text;
     } catch (err: any) {
       const msg = String(err?.message || err);
-      const isTemporary = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('429');
-      if (isTemporary && i < retries) {
-        await new Promise((r) => setTimeout(r, 1500));
+      lastError = msg;
+      const shouldFallback =
+        msg.includes('503') ||
+        msg.includes('UNAVAILABLE') ||
+        msg.includes('429') ||
+        msg.includes('404') ||
+        msg.includes('NOT_FOUND');
+
+      if (shouldFallback) {
+        await new Promise((r) => setTimeout(r, 600));
         continue;
       }
-      throw new Error(
-        isTemporary
-          ? 'Los servidores gratuitos de IA están saturados ahora mismo. Espera 5 segundos e inténtalo de nuevo.'
-          : msg
-      );
+      throw new Error(msg);
     }
   }
-  return '{}';
+
+  throw new Error(
+    `Los servidores gratuitos de IA están saturados ahora mismo. Inténtalo de nuevo en unos segundos. (${lastError.slice(0, 80)})`
+  );
 }
 
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -53,7 +67,13 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   };
 }
 
-function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'): Promise<void> {
+type VoiceProfile = 'Kore' | 'Puck' | 'Zephyr';
+
+function speakJapaneseBrowser(
+  text: string,
+  pace: 'slow' | 'natural' = 'natural',
+  voiceProfile: VoiceProfile = 'Kore'
+): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve();
@@ -62,18 +82,37 @@ function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
-    utterance.rate = pace === 'slow' ? 0.78 : 1.0;
-    utterance.pitch = 1.02;
 
     const voices = window.speechSynthesis.getVoices();
     const jaVoices = voices.filter((v) => v.lang.toLowerCase().includes('ja'));
 
-    const bestVoice =
-      jaVoices.find((v) => /natural|neural|nanami|keita|google/i.test(v.name)) ||
-      jaVoices.find((v) => /kyoko|otoya|haruka|ichiro/i.test(v.name)) ||
-      jaVoices[0];
+    const femaleVoice =
+      jaVoices.find((v) => /nanami|kyoko|haruka|ayumi|sayaka|google/i.test(v.name)) ||
+      jaVoices;
+    const maleVoice =
+      jaVoices.find((v) => /keita|otoya|ichiro|takumi|male/i.test(v.name)) ||
+      jaVoices[1] ||
+      jaVoices;
 
-    if (bestVoice) utterance.voice = bestVoice;
+    const baseRate = pace === 'slow' ? 0.78 : 1.0;
+
+    // Diferencia timbre y velocidad entre Haruka (Kore), Kenji (Puck) y Aoi (Zephyr)
+    if (voiceProfile === 'Puck') {
+      // Kenji (voz masculina / más grave)
+      if (maleVoice) utterance.voice = maleVoice;
+      utterance.pitch = maleVoice && /keita|otoya|ichiro/i.test(maleVoice.name) ? 0.95 : 0.72;
+      utterance.rate = baseRate * 0.96;
+    } else if (voiceProfile === 'Zephyr') {
+      // Aoi (voz juvenil / más aguda y viva)
+      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.pitch = 1.22;
+      utterance.rate = baseRate * 1.05;
+    } else {
+      // Haruka (Kore - voz femenina estándar y pausada)
+      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.pitch = 1.0;
+      utterance.rate = baseRate;
+    }
 
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
@@ -83,15 +122,17 @@ function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'
 
 let lastSpokenText = '';
 let lastPace: 'slow' | 'natural' = 'natural';
+let lastVoice: VoiceProfile = 'Kore';
 
 export const api = {
   synthesizeSpeech: async (
     text: string,
-    _voiceName: 'Kore' | 'Puck' | 'Zephyr' = 'Kore',
+    voiceName: VoiceProfile = 'Kore',
     pace: 'slow' | 'natural' = 'natural'
   ) => {
     lastSpokenText = text;
     lastPace = pace;
+    lastVoice = voiceName;
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
 
@@ -101,7 +142,7 @@ export const api = {
     userText?: string;
     scenario: string;
     jlptLevel: JlptLevel;
-    voiceName: 'Kore' | 'Puck' | 'Zephyr';
+    voiceName: VoiceProfile;
     pace: 'slow' | 'natural';
     history: { role: 'user' | 'sensei'; text: string }[];
     uiLang?: UiLanguage;
@@ -141,6 +182,7 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     const parsed = JSON.parse(raw);
     lastSpokenText = parsed.senseiReplyJa || '';
     lastPace = payload.pace;
+    lastVoice = payload.voiceName;
 
     return {
       ...parsed,
@@ -230,7 +272,7 @@ let currentAudio: HTMLAudioElement | null = null;
 
 export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise<void> {
   if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
-    return speakJapaneseBrowser(lastSpokenText, lastPace);
+    return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
   }
   return new Promise((resolve, reject) => {
     try {
@@ -238,13 +280,3 @@ export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise
         currentAudio.pause();
         currentAudio = null;
       }
-      const audio = new Audio(`data:${mimeType};base64,${base64}`);
-      currentAudio = audio;
-      audio.onended = () => resolve();
-      audio.onerror = () => reject(new Error('No se pudo reproducir el audio.'));
-      audio.play().catch(reject);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
