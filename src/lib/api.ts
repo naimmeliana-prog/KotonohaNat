@@ -123,7 +123,7 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     const cleanBase64 = payload.imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
     const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
         {
@@ -139,7 +139,7 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
     const ai = getAiClient();
     const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`,
       config: { responseMimeType: 'application/json' },
     });
