@@ -17,6 +17,16 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 }
 
+function extractJsonObject(rawText: string): any {
+  const cleaned = rawText.replace(/```json|```/g, '').trim();
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+  }
+  return JSON.parse(cleaned);
+}
+
 async function callOpenRouterFallback(promptText: string, imageBase64?: string): Promise<string | null> {
   const orKey = import.meta.env.VITE_OPENROUTER_API_KEY;
   if (!orKey) return null;
@@ -29,22 +39,26 @@ async function callOpenRouterFallback(promptText: string, imageBase64?: string):
     });
   }
 
-  const res = await fetch('https://openrouter.ai', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + orKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: imageBase64 ? 'google/gemma-3-27b-it:free' : 'meta-llama/llama-3.3-70b-instruct:free',
-      messages: [{ role: 'user', content }],
-    }),
-  });
+  try {
+    const res = await fetch('https://openrouter.ai', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + orKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: imageBase64 ? 'google/gemma-3-27b-it:free' : 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [{ role: 'user', content }],
+      }),
+    });
 
-  if (!res.ok) return null;
-  const data = await res.json();
-  const raw = data?.choices?.[0]?.message?.content || '';
-  return raw.replace(/```json|```/g, '').trim();
+    if (!res.ok) return null;
+    const data = await res.json();
+    const firstChoice = Array.isArray(data?.choices) ? data.choices : null;
+    return firstChoice?.message?.content || null;
+  } catch {
+    return null;
+  }
 }
 
 async function generateWithRetry(
@@ -53,7 +67,6 @@ async function generateWithRetry(
 ): Promise<string> {
   const ai = getAiClient();
 
-  // 3 intentos en gemini-3.8-flash con pausa progresiva
   for (let i = 0; i < 3; i++) {
     try {
       const res = await ai.models.generateContent({
@@ -75,7 +88,6 @@ async function generateWithRetry(
     }
   }
 
-  // Si Gemini está saturado (503) y hay clave de OpenRouter configurada, usa OpenRouter gratis
   if (fallbackInfo) {
     const orResult = await callOpenRouterFallback(fallbackInfo.promptText, fallbackInfo.imageBase64);
     if (orResult) return orResult;
@@ -125,6 +137,13 @@ function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
   return btoa(wavBinary);
 }
 
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
 type VoiceProfile = 'Kore' | 'Puck' | 'Zephyr';
 
 function speakJapaneseBrowser(
@@ -140,9 +159,34 @@ function speakJapaneseBrowser(
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
+
+    const voices = window.speechSynthesis.getVoices();
+    const jaVoices = voices.filter((v) => v.lang.toLowerCase().includes('ja'));
+
+    const femaleVoice =
+      jaVoices.find((v) => /nanami|kyoko|haruka|ayumi|sayaka|google/i.test(v.name)) ||
+      jaVoices;
+    const maleVoice =
+      jaVoices.find((v) => /keita|otoya|ichiro|takumi|male/i.test(v.name)) ||
+      jaVoices ||
+      jaVoices;
+
     const baseRate = pace === 'slow' ? 0.78 : 1.0;
-    utterance.pitch = voiceProfile === 'Puck' ? 0.8 : voiceProfile === 'Zephyr' ? 1.2 : 1.0;
-    utterance.rate = baseRate;
+
+    if (voiceProfile === 'Puck') {
+      if (maleVoice) utterance.voice = maleVoice;
+      utterance.pitch = maleVoice && /keita|otoya|ichiro/i.test(maleVoice.name) ? 0.95 : 0.74;
+      utterance.rate = baseRate * 0.96;
+    } else if (voiceProfile === 'Zephyr') {
+      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.pitch = 1.2;
+      utterance.rate = baseRate * 1.04;
+    } else {
+      if (femaleVoice) utterance.voice = femaleVoice;
+      utterance.pitch = 1.0;
+      utterance.rate = baseRate;
+    }
+
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
     window.speechSynthesis.speak(utterance);
@@ -152,6 +196,7 @@ function speakJapaneseBrowser(
 let lastSpokenText = '';
 let lastPace: 'slow' | 'natural' = 'natural';
 let lastVoice: VoiceProfile = 'Kore';
+let ttsBlockedUntil = 0;
 
 export const api = {
   synthesizeSpeech: async (
@@ -162,6 +207,11 @@ export const api = {
     lastSpokenText = text;
     lastPace = pace;
     lastVoice = voiceName;
+
+    if (Date.now() < ttsBlockedUntil) {
+      return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
+    }
+
     try {
       const ai = getAiClient();
       const stylePrompt =
@@ -180,7 +230,10 @@ export const api = {
           },
         },
       });
-      const inlineData = res.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      const firstCandidate = Array.isArray(res.candidates) ? res.candidates : null;
+      const firstPart = Array.isArray(firstCandidate?.content?.parts) ? firstCandidate.content.parts : null;
+      const inlineData = firstPart?.inlineData;
+
       if (inlineData?.data) {
         const mime = inlineData.mimeType || 'audio/L16;rate=24000';
         if (mime.includes('L16') || mime.includes('pcm')) {
@@ -196,8 +249,12 @@ export const api = {
           mimeType: mime,
         };
       }
-    } catch {
-      // Respaldo automático al navegador
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (msg.includes('429')) {
+        // Pausa las llamadas a Gemini TTS durante 60 segundos si se alcanza el límite gratuito
+        ttsBlockedUntil = Date.now() + 60000;
+      }
     }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
@@ -238,64 +295,61 @@ export const api = {
       '" }';
 
     const parts: any[] = [{ text: prompt }];
-    if (payload.audioBase64 && payload.audioMimeType) {
-      const cleanMime = String(payload.audioMimeType).split(';').trim() || 'audio/webm';
-      parts.unshift({
-        inlineData: {
-          data: payload.audioBase64,
-          mimeType: cleanMime,
-        },
-      });
-    }
-
-    const raw = await generateWithRetry(parts, payload.userText ? { promptText: prompt } : undefined);
-    const parsed = JSON.parse(raw);
-    lastSpokenText = parsed.senseiReplyJa || '';
-    lastPace = payload.pace;
-    lastVoice = payload.voiceName;
-
-    return {
-      ...parsed,
-      audioBase64: null,
-      audioMimeType: null,
-    };
-  },
-
-  evaluateWriting: async (payload: {
-    targetCharacter: string;
-    characterType: 'hiragana' | 'katakana' | 'kanji';
-    imageBase64: string;
-    uiLang?: UiLanguage;
-  }): Promise<WritingEvaluation> => {
-    const langText = payload.uiLang === 'ja' ? 'japonés' : 'español';
-    const cleanBase64 = payload.imageBase64.replace('data:image/png;base64,', '').replace('data:image/jpeg;base64,', '');
-    const promptText =
-      'Evalúa este trazo manuscrito del carácter ' +
-      payload.characterType +
-      ' "' +
-      payload.targetCharacter +
-      '". Responde ÚNICAMENTE en JSON válido en ' +
-      langText +
-      ' con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }';
-
-    const raw = await generateWithRetry(
-      [
-        { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
-        { text: promptText },
-      ],
-      { promptText, imageBase64: cleanBase64 }
-    );
-
-    return JSON.parse(raw);
-  },
-
-  generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
-    const promptText =
-      'Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ' +
-      uiLang +
-      '). Devuelve ÚNICAMENTE JSON: { "promptEs": string, "promptJa": string, "topicTag": string }';
+if (payload.audioBase64 && payload.audioMimeType) {
+const mimeParts = String(payload.audioMimeType).split(';');
+const cleanMime = (mimeParts || 'audio/webm').trim();
+parts.unshift({
+inlineData: {
+data: payload.audioBase64,
+mimeType: cleanMime,
+},
+});
+}
+const raw = await generateWithRetry(parts, payload.userText ? { promptText: prompt } : undefined);
+const parsed = extractJsonObject(raw);
+lastSpokenText = parsed.senseiReplyJa || '';
+lastPace = payload.pace;
+lastVoice = payload.voiceName;
+return {
+...parsed,
+audioBase64: parsed.senseiReplyJa ? 'BROWSER_TTS' : null,
+audioMimeType: 'audio/browser-tts',
+};
+},
+evaluateWriting: async (payload: {
+targetCharacter: string;
+characterType: 'hiragana' | 'katakana' | 'kanji';
+imageBase64: string;
+uiLang?: UiLanguage;
+}): Promise => {
+const langText = payload.uiLang === 'ja' ? 'japonés' : 'español';
+const cleanBase64 = payload.imageBase64
+.replace('data:image/png;base64,', '')
+.replace('data:image/jpeg;base64,', '');
+const promptText =
+'Evalúa este trazo manuscrito del carácter ' +
+payload.characterType +
+' "' +
+payload.targetCharacter +
+'". Responde ÚNICAMENTE en JSON válido en ' +
+langText +
+' con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }';
+const raw = await generateWithRetry(
+[
+{ inlineData: { data: cleanBase64, mimeType: 'image/png' } },
+{ text: promptText },
+],
+{ promptText, imageBase64: cleanBase64 }
+);
+return extractJsonObject(raw);
+},
+generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
+const promptText =
+'Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ' +
+uiLang +
+'). Devuelve ÚNICAMENTE JSON: { "promptEs": string, "promptJa": string, "topicTag": string }';
 const raw = await generateWithRetry(promptText, { promptText });
-return JSON.parse(raw);
+return extractJsonObject(raw);
 },
 bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise => {
 const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
@@ -306,7 +360,7 @@ messageText +
 targetLang +
 '. Devuelve ÚNICAMENTE JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }';
 const raw = await generateWithRetry(promptText, { promptText });
-return JSON.parse(raw);
+return extractJsonObject(raw);
 },
 bridgeReplies: async (
 messageText: string,
@@ -323,7 +377,7 @@ messageText +
 targetLang +
 '. Devuelve ÚNICAMENTE JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }';
 const raw = await generateWithRetry(promptText, { promptText });
-return JSON.parse(raw);
+return extractJsonObject(raw);
 },
 adminTelemetry: async (): Promise =>
 ({
@@ -357,7 +411,7 @@ return {
 mode: payload.mode,
 jlptLevel: payload.jlptLevel,
 sourceName: payload.sourceName,
-extracted: JSON.parse(raw),
+extracted: extractJsonObject(raw),
 };
 },
 };
