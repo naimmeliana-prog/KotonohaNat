@@ -17,6 +17,46 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 }
 
+// Convierte el audio PCM crudo (L16 24kHz) de Gemini TTS en un archivo WAV reproducible
+function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
+  const binary = atob(pcmBase64);
+  const pcmLength = binary.length;
+  const wavBuffer = new ArrayBuffer(44 + pcmLength);
+  const view = new DataView(wavBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + pcmLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, pcmLength, true);
+
+  const bytes = new Uint8Array(wavBuffer, 44);
+  for (let i = 0; i < pcmLength; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  let wavBinary = '';
+  const fullBytes = new Uint8Array(wavBuffer);
+  for (let i = 0; i < fullBytes.length; i++) {
+    wavBinary += String.fromCharCode(fullBytes[i]);
+  }
+  return btoa(wavBinary);
+}
+
 async function generateWithRetry(contents: any): Promise<string> {
   const ai = getAiClient();
   const candidateModels = [
@@ -59,13 +99,6 @@ async function generateWithRetry(contents: any): Promise<string> {
   );
 }
 
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
-}
-
 type VoiceProfile = 'Kore' | 'Puck' | 'Zephyr';
 
 function speakJapaneseBrowser(
@@ -81,34 +114,9 @@ function speakJapaneseBrowser(
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
-
-    const voices = window.speechSynthesis.getVoices();
-    const jaVoices = voices.filter((v) => v.lang.toLowerCase().includes('ja'));
-
-    const femaleVoice =
-      jaVoices.find((v) => /nanami|kyoko|haruka|ayumi|sayaka|google/i.test(v.name)) ||
-      jaVoices[0];
-    const maleVoice =
-      jaVoices.find((v) => /keita|otoya|ichiro|takumi|male/i.test(v.name)) ||
-      jaVoices[1] ||
-      jaVoices[0];
-
     const baseRate = pace === 'slow' ? 0.78 : 1.0;
-
-    if (voiceProfile === 'Puck') {
-      if (maleVoice) utterance.voice = maleVoice;
-      utterance.pitch = maleVoice && /keita|otoya|ichiro/i.test(maleVoice.name) ? 0.95 : 0.72;
-      utterance.rate = baseRate * 0.96;
-    } else if (voiceProfile === 'Zephyr') {
-      if (femaleVoice) utterance.voice = femaleVoice;
-      utterance.pitch = 1.22;
-      utterance.rate = baseRate * 1.05;
-    } else {
-      if (femaleVoice) utterance.voice = femaleVoice;
-      utterance.pitch = 1.0;
-      utterance.rate = baseRate;
-    }
-
+    utterance.pitch = voiceProfile === 'Puck' ? 0.8 : voiceProfile === 'Zephyr' ? 1.2 : 1.0;
+    utterance.rate = baseRate;
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
     window.speechSynthesis.speak(utterance);
@@ -120,7 +128,7 @@ let lastPace: 'slow' | 'natural' = 'natural';
 let lastVoice: VoiceProfile = 'Kore';
 
 export const api = {
-    synthesizeSpeech: async (
+  synthesizeSpeech: async (
     text: string,
     voiceName: VoiceProfile = 'Kore',
     pace: 'slow' | 'natural' = 'natural'
@@ -148,13 +156,22 @@ export const api = {
       });
       const inlineData = res.candidates?.[0]?.content?.parts?.[0]?.inlineData;
       if (inlineData?.data) {
+        const mime = inlineData.mimeType || 'audio/L16;rate=24000';
+        if (mime.includes('L16') || mime.includes('pcm')) {
+          const rateMatch = mime.match(/rate=(\d+)/);
+          const rate = rateMatch ? Number(rateMatch[1]) : 24000;
+          return {
+            audioBase64: pcmBase64ToWavBase64(inlineData.data, rate),
+            mimeType: 'audio/wav',
+          };
+        }
         return {
           audioBase64: inlineData.data,
-          mimeType: inlineData.mimeType || 'audio/wav',
+          mimeType: mime,
         };
       }
     } catch {
-      // Si el modelo de audio está saturado, usa la voz del navegador sin dar error
+      // Respaldo automático al navegador si falla
     }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
@@ -212,8 +229,8 @@ export const api = {
 
     return {
       ...parsed,
-      audioBase64: parsed.senseiReplyJa ? 'BROWSER_TTS' : null,
-      audioMimeType: 'audio/browser-tts',
+      audioBase64: null,
+      audioMimeType: null,
     };
   },
 
@@ -275,55 +292,51 @@ export const api = {
         promptContext +
         '". Mensaje recibido: "' +
         messageText +
-        '". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ' +
-        targetLang +
-        '. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }'
-    );
-    return JSON.parse(raw);
-  },
-
-  adminTelemetry: async (): Promise<AdminTelemetryResponse> =>
-    ({
-      status: 'ok',
-      activeUsers: 1,
-      totalLessons: 0,
-      totalDictionaryEntries: 0,
-      serverMode: 'client-serverless',
-    }) as unknown as AdminTelemetryResponse,
-
-  adminExtractPdf: async (payload: {
-    pdfBase64: string;
-    mode: 'lesson' | 'dictionary';
-    jlptLevel: JlptLevel;
-    sourceName: string;
-  }) => {
-    const cleanPdf = payload.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-    const raw = await generateWithRetry([
-      { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
-      {
-        text:
-          'Extrae contenido educativo de japonés nivel ' +
-          payload.jlptLevel +
-          ' en modo ' +
-          payload.mode +
-          ' desde "' +
-          payload.sourceName +
-          '". Devuelve JSON estructurado.',
-      },
-    ]);
-    return {
-      mode: payload.mode,
-      jlptLevel: payload.jlptLevel,
-      sourceName: payload.sourceName,
-      extracted: JSON.parse(raw),
-    };
-  },
+'". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ' +
+targetLang +
+'. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }'
+);
+return JSON.parse(raw);
+},
+adminTelemetry: async (): Promise =>
+({
+status: 'ok',
+activeUsers: 1,
+totalLessons: 0,
+totalDictionaryEntries: 0,
+serverMode: 'client-serverless',
+}) as unknown as AdminTelemetryResponse,
+adminExtractPdf: async (payload: {
+pdfBase64: string;
+mode: 'lesson' | 'dictionary';
+jlptLevel: JlptLevel;
+sourceName: string;
+}) => {
+const cleanPdf = payload.pdfBase64.replace(/^data:application/pdf;base64,/, '');
+const raw = await generateWithRetry([
+{ inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
+{
+text:
+'Extrae contenido educativo de japonés nivel ' +
+payload.jlptLevel +
+' en modo ' +
+payload.mode +
+' desde "' +
+payload.sourceName +
+'". Devuelve JSON estructurado.',
+},
+]);
+return {
+mode: payload.mode,
+jlptLevel: payload.jlptLevel,
+sourceName: payload.sourceName,
+extracted: JSON.parse(raw),
 };
-
+},
+};
 let currentAudio: HTMLAudioElement | null = null;
-
-export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise<void> {
-  if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
+export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise {
+if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
 return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
 }
 return new Promise((resolve, reject) => {
@@ -335,8 +348,12 @@ currentAudio = null;
 const audio = new Audio('data:' + mimeType + ';base64,' + base64);
 currentAudio = audio;
 audio.onended = () => resolve();
-audio.onerror = () => reject(new Error('No se pudo reproducir el audio.'));
-audio.play().catch(reject);
+audio.onerror = () => {
+speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+};
+audio.play().catch(() => {
+speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+});
 } catch (e) {
 reject(e);
 }
