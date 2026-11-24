@@ -1,0 +1,273 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil privado y de intercambio lingüístico del usuario en Kotonoha (sin PII obligatorio).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "username": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "nativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "learningLang": { "type": "string", "enum": ["es", "ja"] },
+        "learningLevel": { "type": "string", "enum": ["beginner", "intermediate", "advanced"] },
+        "interests": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "type": "string", "maxLength": 40 }
+        },
+        "jlptLevel": { "type": "string", "enum": ["N5", "N4", "N3", "N2", "N1"] },
+        "bio": { "type": "string", "maxLength": 180 },
+        "role": { "type": "string", "enum": ["student", "native_partner", "admin"] },
+        "xp": { "type": "integer" },
+        "streakDays": { "type": "integer" },
+        "lastStudyDate": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "username", "nativeLang", "jlptLevel", "role", "xp", "streakDays", "createdAt", "updatedAt"]
+    },
+    "SrsCard": {
+      "title": "SrsCard",
+      "description": "Tarjeta de repetición espaciada SM-2 propiedad del estudiante.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "cardType": { "type": "string", "enum": ["vocab", "kanji", "grammar"] },
+        "front": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "reading": { "type": "string", "maxLength": 140 },
+        "back": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "hint": { "type": "string", "maxLength": 180 },
+        "jlptLevel": { "type": "string", "enum": ["N5", "N4", "N3", "N2", "N1"] },
+        "easeFactor": { "type": "number" },
+        "intervalDays": { "type": "integer" },
+        "repetitions": { "type": "integer" },
+        "nextReviewAt": { "type": "string", "format": "date-time" },
+        "lastReviewedAt": { "type": "string", "format": "date-time" },
+        "correctCount": { "type": "integer" },
+        "wrongCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "cardType", "front", "back", "jlptLevel", "easeFactor", "intervalDays", "repetitions", "nextReviewAt", "correctCount", "wrongCount", "createdAt"]
+    },
+    "StudyLog": {
+      "title": "StudyLog",
+      "description": "Registro diario de sesión de estudio para gráficas de progreso.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "activityType": { "type": "string", "enum": ["srs", "lesson", "writing", "oral", "exam"] },
+        "score": { "type": "integer" },
+        "durationSeconds": { "type": "integer" },
+        "xpEarned": { "type": "integer" },
+        "details": { "type": "string", "maxLength": 300 },
+        "dayKey": { "type": "string", "maxLength": 12 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "activityType", "score", "durationSeconds", "xpEarned", "dayKey", "createdAt"]
+    },
+    "UnitCompletion": {
+      "title": "UnitCompletion",
+      "description": "Evaluación aprobada por el estudiante en una unidad.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "lessonId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "bestScore": { "type": "integer" },
+        "passed": { "type": "boolean" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "lessonId", "bestScore", "passed", "completedAt"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Unidad didáctica completa JLPT N5-N1 gestionada por administración.",
+      "type": "object",
+      "properties": {
+        "level": { "type": "string", "enum": ["N5", "N4", "N3", "N2", "N1"] },
+        "unitNumber": { "type": "integer" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "subtitle": { "type": "string", "maxLength": 240 },
+        "sourceBook": { "type": "string", "maxLength": 140 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["level", "unitNumber", "title", "subtitle", "sourceBook", "published", "createdAt", "updatedAt"]
+    },
+    "DictionaryEntry": {
+      "title": "DictionaryEntry",
+      "description": "Entrada léxica japonés-español de los diccionarios integrados.",
+      "type": "object",
+      "properties": {
+        "word": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "reading": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "romaji": { "type": "string", "maxLength": 120 },
+        "meaningEs": { "type": "string", "minLength": 1, "maxLength": 260 },
+        "partOfSpeech": { "type": "string", "maxLength": 60 },
+        "jlptLevel": { "type": "string", "enum": ["N5", "N4", "N3", "N2", "N1"] },
+        "exampleJa": { "type": "string", "maxLength": 240 },
+        "exampleReading": { "type": "string", "maxLength": 260 },
+        "exampleEs": { "type": "string", "maxLength": 260 },
+        "dictionarySource": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["word", "reading", "meaningEs", "jlptLevel", "dictionarySource", "published", "createdAt"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "Publicación del foro comunitario sin PII.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUsername": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "authorNativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "authorRole": { "type": "string", "enum": ["student", "native_partner", "admin"] },
+        "category": { "type": "string", "enum": ["gramatica", "pronunciacion", "intercambio", "cultura", "recursos"] },
+        "title": { "type": "string", "minLength": 4, "maxLength": 140 },
+        "content": { "type": "string", "minLength": 8, "maxLength": 2500 },
+        "jlptLevel": { "type": "string", "enum": ["N5", "N4", "N3", "N2", "N1"] },
+        "likesCount": { "type": "integer" },
+        "repliesCount": { "type": "integer" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorUsername", "authorNativeLang", "authorRole", "category", "title", "content", "jlptLevel", "likesCount", "repliesCount", "published", "createdAt", "updatedAt"]
+    },
+    "ForumReply": {
+      "title": "ForumReply",
+      "description": "Respuesta a un tema del foro.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUsername": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "authorNativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "content": { "type": "string", "minLength": 2, "maxLength": 1500 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "authorUid", "authorUsername", "authorNativeLang", "content", "published", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Mensaje en tiempo real en salas de chat comunitarias.",
+      "type": "object",
+      "properties": {
+        "room": { "type": "string", "enum": ["general", "intercambio-es-ja", "principiantes-n5", "practica-oral"] },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUsername": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "authorNativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "content": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "translationHint": { "type": "string", "maxLength": 280 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["room", "authorUid", "authorUsername", "authorNativeLang", "content", "published", "createdAt"]
+    },
+    "DailyPrompt": {
+      "title": "DailyPrompt",
+      "description": "Reto diario bilingüe de conversación asíncrona (ES/JA).",
+      "type": "object",
+      "properties": {
+        "promptEs": { "type": "string", "minLength": 4, "maxLength": 300 },
+        "promptJa": { "type": "string", "minLength": 4, "maxLength": 300 },
+        "topicTag": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "isAiGenerated": { "type": "boolean" },
+        "responsesCount": { "type": "integer" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["promptEs", "promptJa", "topicTag", "authorUid", "isAiGenerated", "responsesCount", "published", "createdAt", "updatedAt"]
+    },
+    "ExchangeResponse": {
+      "title": "ExchangeResponse",
+      "description": "Respuesta publicada por un estudiante en el idioma que está aprendiendo.",
+      "type": "object",
+      "properties": {
+        "promptId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUsername": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "authorNativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "targetLang": { "type": "string", "enum": ["es", "ja"] },
+        "authorLevel": { "type": "string", "enum": ["beginner", "intermediate", "advanced"] },
+        "content": { "type": "string", "minLength": 2, "maxLength": 2000 },
+        "correctionsCount": { "type": "integer" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["promptId", "authorUid", "authorUsername", "authorNativeLang", "targetLang", "authorLevel", "content", "correctionsCount", "published", "createdAt", "updatedAt"]
+    },
+    "ResponseCorrection": {
+      "title": "ResponseCorrection",
+      "description": "Corrección amable o respuesta en hilo de hablantes nativos.",
+      "type": "object",
+      "properties": {
+        "responseId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorUsername": { "type": "string", "minLength": 2, "maxLength": 30 },
+        "authorNativeLang": { "type": "string", "enum": ["es", "ja", "other"] },
+        "kind": { "type": "string", "enum": ["correction", "reply"] },
+        "correctedText": { "type": "string", "maxLength": 2000 },
+        "comment": { "type": "string", "minLength": 2, "maxLength": 1500 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["responseId", "authorUid", "authorUsername", "authorNativeLang", "kind", "comment", "published", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfil privado y preferencias de intercambio de cada usuario."
+    },
+    "/users/{userId}/srsCards/{cardId}": {
+      "schema": { "$ref": "#/entities/SrsCard" },
+      "description": "Mazo personal de tarjetas SM-2 del usuario."
+    },
+    "/users/{userId}/studyLogs/{logId}": {
+      "schema": { "$ref": "#/entities/StudyLog" },
+      "description": "Bitácora de sesiones diarias de estudio."
+    },
+    "/users/{userId}/unitCompletions/{lessonId}": {
+      "schema": { "$ref": "#/entities/UnitCompletion" },
+      "description": "Unidades aprobadas y mejores calificaciones."
+    },
+    "/lessons/{lessonId}": {
+      "schema": { "$ref": "#/entities/Lesson" },
+      "description": "Lecciones y exámenes del plan de estudios JLPT."
+    },
+    "/dictionaryEntries/{entryId}": {
+      "schema": { "$ref": "#/entities/DictionaryEntry" },
+      "description": "Entradas de diccionarios bilingües japonés-español."
+    },
+    "/forumPosts/{postId}": {
+      "schema": { "$ref": "#/entities/ForumPost" },
+      "description": "Hilos públicos del foro de aprendizaje."
+    },
+    "/forumPosts/{postId}/replies/{replyId}": {
+      "schema": { "$ref": "#/entities/ForumReply" },
+      "description": "Respuestas dentro de cada hilo del foro."
+    },
+    "/chatMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Mensajes en tiempo real de las salas de chat."
+    },
+    "/daily_prompts/{promptId}": {
+      "schema": { "$ref": "#/entities/DailyPrompt" },
+      "description": "Preguntas bilingües diarias del muro de intercambio."
+    },
+    "/responses/{responseId}": {
+      "schema": { "$ref": "#/entities/ExchangeResponse" },
+      "description": "Respuestas escritas por los participantes en el idioma meta."
+    },
+    "/responses/{responseId}/corrections/{correctionId}": {
+      "schema": { "$ref": "#/entities/ResponseCorrection" },
+      "description": "Correcciones nativas y respuestas en hilo."
+    }
+  }
+}

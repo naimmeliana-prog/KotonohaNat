@@ -1,0 +1,550 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL HARDENED PRIMITIVES
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'faridmazari@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidLevel(level) {
+      return level in ['N5', 'N4', 'N3', 'N2', 'N1'];
+    }
+
+    function isValidNativeLang(lang) {
+      return lang in ['es', 'ja', 'other'];
+    }
+
+    function isValidTargetLang(lang) {
+      return lang in ['es', 'ja'];
+    }
+
+    function isValidExchangeLevel(lv) {
+      return lv in ['beginner', 'intermediate', 'advanced'];
+    }
+
+    function isValidInterestsList(listVal) {
+      return listVal is list
+        && listVal.size() <= 3
+        && (listVal.size() == 0 || (listVal[0] is string && listVal[0].size() <= 40))
+        && (listVal.size() <= 1 || (listVal[1] is string && listVal[1].size() <= 40))
+        && (listVal.size() <= 2 || (listVal[2] is string && listVal[2].size() <= 40));
+    }
+
+    // =========================================================================
+    // VALIDATION BLUEPRINTS (Anti-Update-Gap)
+    // =========================================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'username', 'nativeLang', 'jlptLevel', 'role', 'xp', 'streakDays', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'username', 'nativeLang', 'learningLang', 'learningLevel', 'interests', 'jlptLevel', 'bio', 'role', 'xp', 'streakDays', 'lastStudyDate', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == request.auth.uid && data.uid.size() <= 128
+        && data.username is string && data.username.size() >= 2 && data.username.size() <= 30
+        && isValidNativeLang(data.nativeLang)
+        && (!('learningLang' in data) || isValidTargetLang(data.learningLang))
+        && (!('learningLevel' in data) || isValidExchangeLevel(data.learningLevel))
+        && (!('interests' in data) || isValidInterestsList(data.interests))
+        && isValidLevel(data.jlptLevel)
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 180))
+        && data.role in ['student', 'native_partner', 'admin']
+        && data.xp is int && data.xp >= 0 && data.xp <= 10000000
+        && data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 10000
+        && (!('lastStudyDate' in data) || (data.lastStudyDate is string && data.lastStudyDate.size() <= 20))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSrsCard(data, userId) {
+      return data.keys().hasAll(['userId', 'cardType', 'front', 'back', 'jlptLevel', 'easeFactor', 'intervalDays', 'repetitions', 'nextReviewAt', 'correctCount', 'wrongCount', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'cardType', 'front', 'reading', 'back', 'hint', 'jlptLevel', 'easeFactor', 'intervalDays', 'repetitions', 'nextReviewAt', 'lastReviewedAt', 'correctCount', 'wrongCount', 'createdAt'])
+        && data.userId is string && data.userId == userId && data.userId.size() <= 128
+        && data.cardType in ['vocab', 'kanji', 'grammar']
+        && data.front is string && data.front.size() >= 1 && data.front.size() <= 120
+        && (!('reading' in data) || (data.reading is string && data.reading.size() <= 140))
+        && data.back is string && data.back.size() >= 1 && data.back.size() <= 240
+        && (!('hint' in data) || (data.hint is string && data.hint.size() <= 180))
+        && isValidLevel(data.jlptLevel)
+        && (data.easeFactor is float || data.easeFactor is int) && data.easeFactor >= 1.3 && data.easeFactor <= 5.0
+        && data.intervalDays is int && data.intervalDays >= 0 && data.intervalDays <= 365
+        && data.repetitions is int && data.repetitions >= 0 && data.repetitions <= 10000
+        && data.nextReviewAt is timestamp
+        && (!('lastReviewedAt' in data) || data.lastReviewedAt is timestamp || data.lastReviewedAt == null)
+        && data.correctCount is int && data.correctCount >= 0
+        && data.wrongCount is int && data.wrongCount >= 0
+        && data.createdAt is timestamp;
+    }
+
+    function isValidStudyLog(data, userId) {
+      return data.keys().hasAll(['userId', 'activityType', 'score', 'durationSeconds', 'xpEarned', 'dayKey', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'activityType', 'score', 'durationSeconds', 'xpEarned', 'details', 'dayKey', 'createdAt'])
+        && data.userId is string && data.userId == userId && data.userId.size() <= 128
+        && data.activityType in ['srs', 'lesson', 'writing', 'oral', 'exam']
+        && data.score is int && data.score >= 0 && data.score <= 100
+        && data.durationSeconds is int && data.durationSeconds >= 1 && data.durationSeconds <= 7200
+        && data.xpEarned is int && data.xpEarned >= 0 && data.xpEarned <= 300
+        && (!('details' in data) || (data.details is string && data.details.size() <= 300))
+        && data.dayKey is string && data.dayKey.size() >= 8 && data.dayKey.size() <= 12
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUnitCompletion(data, userId) {
+      return data.keys().hasAll(['userId', 'lessonId', 'bestScore', 'passed', 'completedAt'])
+        && data.keys().hasOnly(['userId', 'lessonId', 'bestScore', 'passed', 'completedAt'])
+        && data.userId is string && data.userId == userId && data.userId.size() <= 128
+        && data.lessonId is string && data.lessonId.size() >= 1 && data.lessonId.size() <= 128
+        && data.bestScore is int && data.bestScore >= 0 && data.bestScore <= 100
+        && data.passed is bool
+        && data.completedAt is timestamp;
+    }
+
+    function isValidLesson(data) {
+      return data.keys().hasAll(['level', 'unitNumber', 'title', 'subtitle', 'sourceBook', 'grammarPoints', 'vocabulary', 'kanjiList', 'dialogue', 'exercises', 'unitExam', 'published', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['level', 'unitNumber', 'title', 'subtitle', 'sourceBook', 'grammarPoints', 'vocabulary', 'kanjiList', 'dialogue', 'exercises', 'unitExam', 'published', 'createdAt', 'updatedAt'])
+        && isValidLevel(data.level)
+        && data.unitNumber is int && data.unitNumber >= 1 && data.unitNumber <= 500
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 180
+        && data.subtitle is string && data.subtitle.size() <= 240
+        && data.sourceBook is string && data.sourceBook.size() >= 1 && data.sourceBook.size() <= 140
+        && data.grammarPoints is list && data.grammarPoints.size() <= 30
+        && data.vocabulary is list && data.vocabulary.size() <= 120
+        && data.kanjiList is list && data.kanjiList.size() <= 60
+        && data.dialogue is list && data.dialogue.size() <= 40
+        && data.exercises is list && data.exercises.size() <= 40
+        && data.unitExam is list && data.unitExam.size() <= 40
+        && data.published is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDictionaryEntry(data) {
+      return data.keys().hasAll(['word', 'reading', 'meaningEs', 'jlptLevel', 'dictionarySource', 'published', 'createdAt'])
+        && data.keys().hasOnly(['word', 'reading', 'romaji', 'meaningEs', 'partOfSpeech', 'jlptLevel', 'exampleJa', 'exampleReading', 'exampleEs', 'dictionarySource', 'tags', 'published', 'createdAt'])
+        && data.word is string && data.word.size() >= 1 && data.word.size() <= 80
+        && data.reading is string && data.reading.size() >= 1 && data.reading.size() <= 100
+        && (!('romaji' in data) || (data.romaji is string && data.romaji.size() <= 120))
+        && data.meaningEs is string && data.meaningEs.size() >= 1 && data.meaningEs.size() <= 260
+        && (!('partOfSpeech' in data) || (data.partOfSpeech is string && data.partOfSpeech.size() <= 60))
+        && isValidLevel(data.jlptLevel)
+        && (!('exampleJa' in data) || (data.exampleJa is string && data.exampleJa.size() <= 240))
+        && (!('exampleReading' in data) || (data.exampleReading is string && data.exampleReading.size() <= 260))
+        && (!('exampleEs' in data) || (data.exampleEs is string && data.exampleEs.size() <= 260))
+        && data.dictionarySource is string && data.dictionarySource.size() >= 1 && data.dictionarySource.size() <= 120
+        && (!('tags' in data) || (data.tags is list && data.tags.size() <= 10 && (data.tags.size() == 0 || data.tags[0] is string)))
+        && data.published is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidForumPost(data) {
+      return data.keys().hasAll(['authorUid', 'authorUsername', 'authorNativeLang', 'authorRole', 'category', 'title', 'content', 'jlptLevel', 'likesCount', 'repliesCount', 'published', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['authorUid', 'authorUsername', 'authorNativeLang', 'authorRole', 'category', 'title', 'content', 'jlptLevel', 'likesCount', 'repliesCount', 'published', 'createdAt', 'updatedAt'])
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorUsername is string && data.authorUsername.size() >= 2 && data.authorUsername.size() <= 30
+        && isValidNativeLang(data.authorNativeLang)
+        && data.authorRole in ['student', 'native_partner', 'admin']
+        && data.category in ['gramatica', 'pronunciacion', 'intercambio', 'cultura', 'recursos']
+        && data.title is string && data.title.size() >= 4 && data.title.size() <= 140
+        && data.content is string && data.content.size() >= 8 && data.content.size() <= 2500
+        && isValidLevel(data.jlptLevel)
+        && data.likesCount is int && data.likesCount >= 0
+        && data.repliesCount is int && data.repliesCount >= 0
+        && data.published is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidForumReply(data, postId) {
+      return data.keys().hasAll(['postId', 'authorUid', 'authorUsername', 'authorNativeLang', 'content', 'published', 'createdAt'])
+        && data.keys().hasOnly(['postId', 'authorUid', 'authorUsername', 'authorNativeLang', 'content', 'published', 'createdAt'])
+        && data.postId is string && data.postId == postId && data.postId.size() <= 128
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorUsername is string && data.authorUsername.size() >= 2 && data.authorUsername.size() <= 30
+        && isValidNativeLang(data.authorNativeLang)
+        && data.content is string && data.content.size() >= 2 && data.content.size() <= 1500
+        && data.published is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['room', 'authorUid', 'authorUsername', 'authorNativeLang', 'content', 'published', 'createdAt'])
+        && data.keys().hasOnly(['room', 'authorUid', 'authorUsername', 'authorNativeLang', 'content', 'translationHint', 'published', 'createdAt'])
+        && data.room in ['general', 'intercambio-es-ja', 'principiantes-n5', 'practica-oral']
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorUsername is string && data.authorUsername.size() >= 2 && data.authorUsername.size() <= 30
+        && isValidNativeLang(data.authorNativeLang)
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 600
+        && (!('translationHint' in data) || (data.translationHint is string && data.translationHint.size() <= 280))
+        && data.published is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidDailyPrompt(data) {
+      return data.keys().hasAll(['promptEs', 'promptJa', 'topicTag', 'authorUid', 'isAiGenerated', 'responsesCount', 'published', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['promptEs', 'promptJa', 'topicTag', 'authorUid', 'isAiGenerated', 'responsesCount', 'published', 'createdAt', 'updatedAt'])
+        && data.promptEs is string && data.promptEs.size() >= 4 && data.promptEs.size() <= 300
+        && data.promptJa is string && data.promptJa.size() >= 4 && data.promptJa.size() <= 300
+        && data.topicTag is string && data.topicTag.size() >= 1 && data.topicTag.size() <= 40
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.isAiGenerated is bool
+        && data.responsesCount is int && data.responsesCount >= 0
+        && data.published is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidExchangeResponse(data) {
+      return data.keys().hasAll(['promptId', 'authorUid', 'authorUsername', 'authorNativeLang', 'targetLang', 'authorLevel', 'content', 'correctionsCount', 'published', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['promptId', 'authorUid', 'authorUsername', 'authorNativeLang', 'targetLang', 'authorLevel', 'content', 'correctionsCount', 'published', 'createdAt', 'updatedAt'])
+        && data.promptId is string && isValidId(data.promptId)
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorUsername is string && data.authorUsername.size() >= 2 && data.authorUsername.size() <= 30
+        && isValidNativeLang(data.authorNativeLang)
+        && isValidTargetLang(data.targetLang)
+        && isValidExchangeLevel(data.authorLevel)
+        && data.content is string && data.content.size() >= 2 && data.content.size() <= 2000
+        && data.correctionsCount is int && data.correctionsCount >= 0
+        && data.published is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidResponseCorrection(data, responseId) {
+      return data.keys().hasAll(['responseId', 'authorUid', 'authorUsername', 'authorNativeLang', 'kind', 'comment', 'published', 'createdAt'])
+        && data.keys().hasOnly(['responseId', 'authorUid', 'authorUsername', 'authorNativeLang', 'kind', 'correctedText', 'comment', 'published', 'createdAt'])
+        && data.responseId is string && data.responseId == responseId && data.responseId.size() <= 128
+        && data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128
+        && data.authorUsername is string && data.authorUsername.size() >= 2 && data.authorUsername.size() <= 30
+        && isValidNativeLang(data.authorNativeLang)
+        && data.kind in ['correction', 'reply']
+        && (!('correctedText' in data) || (data.correctedText is string && data.correctedText.size() <= 2000))
+        && data.comment is string && data.comment.size() >= 2 && data.comment.size() <= 1500
+        && data.published is bool
+        && data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // HEALTH CHECK DOC
+    // =========================================================================
+    match /test/{docId} {
+      allow get: if docId == 'connection';
+    }
+
+    // =========================================================================
+    // ADMINS ALLOWLIST
+    // =========================================================================
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // USERS & PRIVATE SUBCOLLECTIONS (Strict Owner / Admin Isolation)
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().role in ['student', 'native_partner']
+        && incoming().xp == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(userId)
+            && incoming().role == existing().role
+            && (
+              incoming().diff(existing()).affectedKeys().hasOnly(['username', 'nativeLang', 'learningLang', 'learningLevel', 'interests', 'jlptLevel', 'bio', 'updatedAt']) ||
+              (
+                incoming().diff(existing()).affectedKeys().hasOnly(['xp', 'streakDays', 'lastStudyDate', 'updatedAt'])
+                && incoming().xp >= existing().xp
+                && incoming().xp <= existing().xp + 300
+              )
+            )
+          )
+        );
+
+      allow delete: if isValidId(userId) && isAdmin();
+
+      match /srsCards/{cardId} {
+        allow get: if isValidId(userId) && isValidId(cardId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+        allow create: if isValidId(userId) && isValidId(cardId)
+          && isOwner(userId)
+          && isValidSrsCard(incoming(), userId)
+          && incoming().createdAt == request.time;
+
+        allow update: if isValidId(userId) && isValidId(cardId)
+          && isOwner(userId)
+          && isValidSrsCard(incoming(), userId)
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['easeFactor', 'intervalDays', 'repetitions', 'nextReviewAt', 'lastReviewedAt', 'correctCount', 'wrongCount']);
+
+        allow delete: if isValidId(userId) && isValidId(cardId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /studyLogs/{logId} {
+        allow get: if isValidId(userId) && isValidId(logId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+        allow create: if isValidId(userId) && isValidId(logId)
+          && isOwner(userId)
+          && isValidStudyLog(incoming(), userId)
+          && incoming().createdAt == request.time;
+
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(logId) && isAdmin();
+      }
+
+      match /unitCompletions/{lessonId} {
+        allow get: if isValidId(userId) && isValidId(lessonId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+        allow create, update: if isValidId(userId) && isValidId(lessonId)
+          && isOwner(userId)
+          && isValidUnitCompletion(incoming(), userId)
+          && incoming().completedAt == request.time;
+
+        allow delete: if isValidId(userId) && isValidId(lessonId) && isAdmin();
+      }
+    }
+
+    // =========================================================================
+    // LESSONS & DICTIONARY (Public Read for Published Content, Admin Write)
+    // =========================================================================
+    match /lessons/{lessonId} {
+      allow get: if isValidId(lessonId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(lessonId)
+        && isAdmin()
+        && isValidLesson(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(lessonId)
+        && isAdmin()
+        && isValidLesson(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+
+      allow delete: if isValidId(lessonId) && isAdmin();
+    }
+
+    match /dictionaryEntries/{entryId} {
+      allow get: if isValidId(entryId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(entryId)
+        && isAdmin()
+        && isValidDictionaryEntry(incoming())
+        && incoming().createdAt == request.time;
+
+      allow update: if isValidId(entryId)
+        && isAdmin()
+        && isValidDictionaryEntry(incoming())
+        && incoming().createdAt == existing().createdAt;
+
+      allow delete: if isValidId(entryId) && isAdmin();
+    }
+
+    // =========================================================================
+    // COMMUNITY FORUM & LIVE CHAT (No PII, Strict Author & Action Rules)
+    // =========================================================================
+    match /forumPosts/{postId} {
+      allow get: if isValidId(postId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(postId)
+        && isSignedIn()
+        && isValidForumPost(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().likesCount == 0
+        && incoming().repliesCount == 0
+        && incoming().published == true
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(postId)
+        && isSignedIn()
+        && isValidForumPost(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().authorUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'category', 'jlptLevel', 'updatedAt'])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt'])
+            && incoming().likesCount == existing().likesCount + 1
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['repliesCount', 'updatedAt'])
+            && incoming().repliesCount == existing().repliesCount + 1
+          )
+        );
+
+      allow delete: if isValidId(postId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+
+      match /replies/{replyId} {
+        allow get: if isValidId(postId) && isValidId(replyId) && (existing().published == true || isAdmin());
+        allow list: if existing().published == true || isAdmin();
+
+        allow create: if isValidId(postId) && isValidId(replyId)
+          && isSignedIn()
+          && isValidForumReply(incoming(), postId)
+          && incoming().authorUid == request.auth.uid
+          && incoming().published == true
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/forumPosts/$(postId))
+          && getAfter(/databases/$(database)/documents/forumPosts/$(postId)).data.repliesCount == get(/databases/$(database)/documents/forumPosts/$(postId)).data.repliesCount + 1;
+
+        allow update: if false;
+        allow delete: if isValidId(postId) && isValidId(replyId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+      }
+    }
+
+    match /chatMessages/{messageId} {
+      allow get: if isValidId(messageId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(messageId)
+        && isSignedIn()
+        && isValidChatMessage(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().published == true
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isValidId(messageId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+    }
+
+    // =========================================================================
+    // LANGUAGE EXCHANGE: DAILY PROMPTS, RESPONSES & NATIVE CORRECTIONS
+    // =========================================================================
+    match /daily_prompts/{promptId} {
+      allow get: if isValidId(promptId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(promptId)
+        && isSignedIn()
+        && isValidDailyPrompt(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().responsesCount == 0
+        && incoming().published == true
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(promptId)
+        && isSignedIn()
+        && isValidDailyPrompt(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['responsesCount', 'updatedAt'])
+            && incoming().responsesCount == existing().responsesCount + 1
+          )
+        );
+
+      allow delete: if isValidId(promptId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+    }
+
+    match /responses/{responseId} {
+      allow get: if isValidId(responseId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isAdmin();
+
+      allow create: if isValidId(responseId)
+        && isSignedIn()
+        && isValidExchangeResponse(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().correctionsCount == 0
+        && incoming().published == true
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/daily_prompts/$(incoming().promptId));
+
+      allow update: if isValidId(responseId)
+        && isSignedIn()
+        && isValidExchangeResponse(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().promptId == existing().promptId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().authorUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt'])
+          ) ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['correctionsCount', 'updatedAt'])
+            && incoming().correctionsCount == existing().correctionsCount + 1
+          )
+        );
+
+      allow delete: if isValidId(responseId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+
+      match /corrections/{correctionId} {
+        allow get: if isValidId(responseId) && isValidId(correctionId) && (existing().published == true || isAdmin());
+        allow list: if existing().published == true || isAdmin();
+
+        allow create: if isValidId(responseId) && isValidId(correctionId)
+          && isSignedIn()
+          && isValidResponseCorrection(incoming(), responseId)
+          && incoming().authorUid == request.auth.uid
+          && incoming().published == true
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/responses/$(responseId))
+          && getAfter(/databases/$(database)/documents/responses/$(responseId)).data.correctionsCount == get(/databases/$(database)/documents/responses/$(responseId)).data.correctionsCount + 1;
+
+        allow update: if false;
+        allow delete: if isValidId(responseId) && isValidId(correctionId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+      }
+    }
+  }
+}

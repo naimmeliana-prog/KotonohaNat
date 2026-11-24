@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <clipPath id="hinomaru-clip">
+      <circle cx="32" cy="32" r="32" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#hinomaru-clip)">
+    <!-- Full-bleed Hinomaru vermilion sun occupying 100% of icon bounds with transparent corners -->
+    <circle cx="32" cy="32" r="32" fill="#C9372C" />
+    <!-- Minimalist Mount Fuji silhouette -->
+    <path d="M-2 52 L22 25 L27 25 L32 28 L37 25 L42 25 L66 52 L66 64 L-2 64 Z" fill="#183254" />
+    <!-- Fuji snowcap -->
+    <path d="M22 25 L27 25 L32 28 L37 25 L42 25 L46 30 L40 31 L36 29 L32 33 L28 29 L24 31 L18 30 Z" fill="#F7F5F0" />
+    <!-- Great Wave of Kanagawa stylized crests -->
+    <path d="M-2 49 C7 38, 17 39, 22 46 C18 44, 14 46, 15 50 C23 45, 32 45, 41 51 C38 44, 46 37, 56 41 C51 42, 49 46, 52 50 C57 47, 62 47, 66 50 L66 64 L-2 64 Z" fill="#0F223D" />
+    <path d="M2 51 C8 43, 15 43, 20 48 M39 50 C43 43, 49 41, 55 43 M18 55 C28 50, 39 51, 49 57" stroke="#F7F5F0" stroke-width="2.4" stroke-linecap="round" />
+  </g>
+</svg>

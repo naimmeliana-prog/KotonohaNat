@@ -1,0 +1,6 @@
+{
+  "name": "Kotonoha",
+  "description": "Plataforma integral para aprender japonés (JLPT N5 a N1) con tutor oral IA con pronunciación realista, repetición espaciada, escritura en lienzo, diccionarios integrados, foro, chat comunitario y panel de administración.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
