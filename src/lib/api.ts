@@ -19,7 +19,6 @@ function getAiClient() {
 
 async function generateWithRetry(contents: any): Promise<string> {
   const ai = getAiClient();
-  // Rota entre distintos modelos gratuitos si alguno devuelve 503 (saturado) o 404
   const candidateModels = [
     'gemini-3.8-flash',
     'gemini-2.5-pro',
@@ -56,7 +55,7 @@ async function generateWithRetry(contents: any): Promise<string> {
   }
 
   throw new Error(
-    `Los servidores gratuitos de IA están saturados ahora mismo. Inténtalo de nuevo en unos segundos. (${lastError.slice(0, 80)})`
+    'Los servidores gratuitos de IA están saturados ahora mismo. Inténtalo de nuevo en unos segundos. (' + lastError.slice(0, 80) + ')'
   );
 }
 
@@ -88,27 +87,23 @@ function speakJapaneseBrowser(
 
     const femaleVoice =
       jaVoices.find((v) => /nanami|kyoko|haruka|ayumi|sayaka|google/i.test(v.name)) ||
-      jaVoices;
+      jaVoices[0];
     const maleVoice =
       jaVoices.find((v) => /keita|otoya|ichiro|takumi|male/i.test(v.name)) ||
       jaVoices[1] ||
-      jaVoices;
+      jaVoices[0];
 
     const baseRate = pace === 'slow' ? 0.78 : 1.0;
 
-    // Diferencia timbre y velocidad entre Haruka (Kore), Kenji (Puck) y Aoi (Zephyr)
     if (voiceProfile === 'Puck') {
-      // Kenji (voz masculina / más grave)
       if (maleVoice) utterance.voice = maleVoice;
       utterance.pitch = maleVoice && /keita|otoya|ichiro/i.test(maleVoice.name) ? 0.95 : 0.72;
       utterance.rate = baseRate * 0.96;
     } else if (voiceProfile === 'Zephyr') {
-      // Aoi (voz juvenil / más aguda y viva)
       if (femaleVoice) utterance.voice = femaleVoice;
       utterance.pitch = 1.22;
       utterance.rate = baseRate * 1.05;
     } else {
-      // Haruka (Kore - voz femenina estándar y pausada)
       if (femaleVoice) utterance.voice = femaleVoice;
       utterance.pitch = 1.0;
       utterance.rate = baseRate;
@@ -150,23 +145,26 @@ export const api = {
     const uiLang = payload.uiLang || 'es';
     const explanationLang = uiLang === 'ja' ? 'japonés natural' : 'español';
 
-    const prompt = `Eres un profesor nativo de japonés (Sensei) amable. Escenario: "${payload.scenario}". Nivel del estudiante: ${payload.jlptLevel}.
-Historial reciente: ${JSON.stringify(payload.history.slice(-6))}
-${payload.userText ? `El estudiante escribió: "${payload.userText}"` : 'El estudiante envió un audio. Transcríbelo en japonés y evalúa su pronunciación y naturalidad.'}
-
-Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
-{
-  "userTranscriptJa": "lo que dijo el usuario en japonés",
-  "userTranscriptReading": "lectura en hiragana",
-  "userMeaningEs": "traducción al ${explanationLang}",
-  "pronunciationScore": 85,
-  "feedbackEs": "consejo breve y amable en ${explanationLang}",
-  "correctedJa": "forma más natural de decirlo en japonés (o la misma si ya es perfecta)",
-  "senseiReplyJa": "tu respuesta en japonés para continuar la conversación según el nivel ${payload.jlptLevel}",
-  "senseiReplyReading": "lectura en hiragana de tu respuesta",
-  "senseiReplyRomaji": "romaji de tu respuesta",
-  "senseiReplyEs": "traducción de tu respuesta al ${explanationLang}"
-}`;
+    const prompt =
+      'Eres un profesor nativo de japonés (Sensei) amable. Escenario: "' +
+      payload.scenario +
+      '". Nivel del estudiante: ' +
+      payload.jlptLevel +
+      '. Historial reciente: ' +
+      JSON.stringify(payload.history.slice(-6)) +
+      '. ' +
+      (payload.userText
+        ? 'El estudiante escribió: "' + payload.userText + '"'
+        : 'El estudiante envió un audio. Transcríbelo en japonés y evalúa su pronunciación y naturalidad.') +
+      ' Responde ÚNICAMENTE en JSON válido con esta estructura exacta: { "userTranscriptJa": "lo que dijo el usuario en japonés", "userTranscriptReading": "lectura en hiragana", "userMeaningEs": "traducción al ' +
+      explanationLang +
+      '", "pronunciationScore": 85, "feedbackEs": "consejo breve y amable en ' +
+      explanationLang +
+      '", "correctedJa": "forma más natural de decirlo en japonés (o la misma si ya es perfecta)", "senseiReplyJa": "tu respuesta en japonés para continuar la conversación según el nivel ' +
+      payload.jlptLevel +
+      '", "senseiReplyReading": "lectura en hiragana de tu respuesta", "senseiReplyRomaji": "romaji de tu respuesta", "senseiReplyEs": "traducción de tu respuesta al ' +
+      explanationLang +
+      '" }';
 
     const parts: any[] = [{ text: prompt }];
     if (payload.audioBase64 && payload.audioMimeType) {
@@ -203,29 +201,25 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     const raw = await generateWithRetry([
       { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
       {
-        text: `Evalúa este trazo manuscrito del carácter ${payload.characterType} "${payload.targetCharacter}". Responde en ${langText} en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }`,
+        text:
+          'Evalúa este trazo manuscrito del carácter ' +
+          payload.characterType +
+          ' "' +
+          payload.targetCharacter +
+          '". Responde en ' +
+          langText +
+          ' en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }',
       },
     ]);
 
     return JSON.parse(raw);
   },
-if (currentAudio) {
-currentAudio.pause();
-currentAudio = null;
-}
-const audio = new Audio('data:' + mimeType + ';base64,' + base64);
-currentAudio = audio;
-audio.onended = () => resolve();
-audio.onerror = () => reject(new Error('No se pudo reproducir el audio.'));
-audio.play().catch(reject);
-} catch (e) {
-reject(e);
-}
-});
-}
+
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
     const raw = await generateWithRetry(
-      `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`
+      'Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ' +
+        uiLang +
+        '). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }'
     );
     return JSON.parse(raw);
   },
@@ -233,7 +227,11 @@ reject(e);
   bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise<BridgeExplanation> => {
     const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
     const raw = await generateWithRetry(
-      `Analiza este mensaje de intercambio de idiomas: "${messageText}". Explica en ${targetLang}. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }`
+      'Analiza este mensaje de intercambio de idiomas: "' +
+        messageText +
+        '". Explica en ' +
+        targetLang +
+        '. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }'
     );
     return JSON.parse(raw);
   },
@@ -245,7 +243,13 @@ reject(e);
   ): Promise<{ suggestions: BridgeReplySuggestion[] }> => {
     const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
     const raw = await generateWithRetry(
-      `Contexto del tema: "${promptContext}". Mensaje recibido: "${messageText}". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ${targetLang}. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }`
+      'Contexto del tema: "' +
+        promptContext +
+        '". Mensaje recibido: "' +
+        messageText +
+        '". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ' +
+        targetLang +
+        '. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }'
     );
     return JSON.parse(raw);
   },
@@ -269,7 +273,14 @@ reject(e);
     const raw = await generateWithRetry([
       { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
       {
-        text: `Extrae contenido educativo de japonés nivel ${payload.jlptLevel} en modo ${payload.mode} desde "${payload.sourceName}". Devuelve JSON estructurado.`,
+        text:
+          'Extrae contenido educativo de japonés nivel ' +
+          payload.jlptLevel +
+          ' en modo ' +
+          payload.mode +
+          ' desde "' +
+          payload.sourceName +
+          '". Devuelve JSON estructurado.',
       },
     ]);
     return {
@@ -285,11 +296,21 @@ let currentAudio: HTMLAudioElement | null = null;
 
 export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise<void> {
   if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
-    return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
-  }
-  return new Promise((resolve, reject) => {
-    try {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-      }
+return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
+}
+return new Promise((resolve, reject) => {
+try {
+if (currentAudio) {
+currentAudio.pause();
+currentAudio = null;
+}
+const audio = new Audio('data:' + mimeType + ';base64,' + base64);
+currentAudio = audio;
+audio.onended = () => resolve();
+audio.onerror = () => reject(new Error('No se pudo reproducir el audio.'));
+audio.play().catch(reject);
+} catch (e) {
+reject(e);
+}
+});
+}
