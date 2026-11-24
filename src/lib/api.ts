@@ -1,3 +1,4 @@
+import { GoogleGenAI, Type } from '@google/genai';
 import type {
   AdminTelemetryResponse,
   BridgeExplanation,
@@ -7,34 +8,51 @@ import type {
   UiLanguage,
   WritingEvaluation,
 } from '../types/kotonoha';
-import { auth } from './firebase';
 
-async function serverRequest<T>(url: string, options: RequestInit = {}, includeIdToken = false): Promise<T> {
-  const headers = new Headers(options.headers || {});
-  if (!headers.has('Content-Type') && options.body) {
-    headers.set('Content-Type', 'application/json');
+function getAiClient() {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Falta configurar VITE_GEMINI_API_KEY en las variables de entorno de Vercel.');
   }
-  if (includeIdToken && auth.currentUser) {
-    const token = await auth.currentUser.getIdToken();
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
-  const res = await fetch(url, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Error de servidor (${res.status})`);
-  }
-  return data as T;
+  return new GoogleGenAI({ apiKey });
 }
 
-export const api = {
-  synthesizeSpeech: (text: string, voiceName: 'Kore' | 'Puck' | 'Zephyr' = 'Kore', pace: 'slow' | 'natural' = 'natural') =>
-    serverRequest<{ audioBase64: string; mimeType: string }>('/api/ai/tts', {
-      method: 'POST',
-      body: JSON.stringify({ text, voiceName, pace }),
-    }),
+function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      resolve();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = pace === 'slow' ? 0.75 : 1.0;
 
-  sendOralTurn: (payload: {
+    const voices = window.speechSynthesis.getVoices();
+    const jaVoice = voices.find((v) => v.lang.includes('ja'));
+    if (jaVoice) utterance.voice = jaVoice;
+
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+let lastSpokenText = '';
+let lastPace: 'slow' | 'natural' = 'natural';
+
+export const api = {
+  synthesizeSpeech: async (
+    text: string,
+    _voiceName: 'Kore' | 'Puck' | 'Zephyr' = 'Kore',
+    pace: 'slow' | 'natural' = 'natural'
+  ) => {
+    lastSpokenText = text;
+    lastPace = pace;
+    return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
+  },
+
+  sendOralTurn: async (payload: {
     audioBase64?: string;
     audioMimeType?: string;
     userText?: string;
@@ -44,52 +62,157 @@ export const api = {
     pace: 'slow' | 'natural';
     history: { role: 'user' | 'sensei'; text: string }[];
     uiLang?: UiLanguage;
-  }) => serverRequest<OralTurnResponse>('/api/ai/oral-turn', { method: 'POST', body: JSON.stringify(payload) }),
+  }): Promise<OralTurnResponse> => {
+    const ai = getAiClient();
+    const uiLang = payload.uiLang || 'es';
+    const explanationLang = uiLang === 'ja' ? 'japonés natural' : 'español';
 
-  evaluateWriting: (payload: {
+    const prompt = `Eres un profesor nativo de japonés (Sensei) amable. Escenario: "${payload.scenario}". Nivel del estudiante: ${payload.jlptLevel}.
+Historial reciente: ${JSON.stringify(payload.history.slice(-6))}
+${payload.userText ? `El estudiante escribió: "${payload.userText}"` : 'El estudiante envió un audio. Transcríbelo en japonés y evalúa su pronunciación y naturalidad.'}
+
+Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
+{
+  "userTranscriptJa": "lo que dijo el usuario en japonés",
+  "userTranscriptReading": "lectura en hiragana",
+  "userMeaningEs": "traducción al ${explanationLang}",
+  "pronunciationScore": 85,
+  "feedbackEs": "consejo breve y amable en ${explanationLang}",
+  "correctedJa": "forma más natural de decirlo en japonés (o la misma si ya es perfecta)",
+  "senseiReplyJa": "tu respuesta en japonés para continuar la conversación según el nivel ${payload.jlptLevel}",
+  "senseiReplyReading": "lectura en hiragana de tu respuesta",
+  "senseiReplyRomaji": "romaji de tu respuesta",
+  "senseiReplyEs": "traducción de tu respuesta al ${explanationLang}"
+}`;
+
+    const parts: any[] = [{ text: prompt }];
+    if (payload.audioBase64 && payload.audioMimeType) {
+      parts.unshift({
+        inlineData: {
+          data: payload.audioBase64,
+          mimeType: payload.audioMimeType,
+        },
+      });
+    }
+
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: parts,
+      config: { responseMimeType: 'application/json' },
+    });
+
+    const parsed = JSON.parse(res.text || '{}');
+    lastSpokenText = parsed.senseiReplyJa || '';
+    lastPace = payload.pace;
+
+    return {
+      ...parsed,
+      audioBase64: parsed.senseiReplyJa ? 'BROWSER_TTS' : null,
+      audioMimeType: 'audio/browser-tts',
+    };
+  },
+
+  evaluateWriting: async (payload: {
     targetCharacter: string;
     characterType: 'hiragana' | 'katakana' | 'kanji';
     imageBase64: string;
     uiLang?: UiLanguage;
-  }) => serverRequest<WritingEvaluation>('/api/ai/evaluate-writing', { method: 'POST', body: JSON.stringify(payload) }),
+  }): Promise<WritingEvaluation> => {
+    const ai = getAiClient();
+    const langText = payload.uiLang === 'ja' ? 'japonés' : 'español';
+    const cleanBase64 = payload.imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-  generateDailyPrompt: (uiLang: UiLanguage = 'es') =>
-    serverRequest<{ promptEs: string; promptJa: string; topicTag: string }>('/api/ai/generate-prompt', {
-      method: 'POST',
-      body: JSON.stringify({ uiLang }),
-    }),
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
+        {
+          text: `Evalúa este trazo manuscrito del carácter ${payload.characterType} "${payload.targetCharacter}". Responde en ${langText} en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }`,
+        },
+      ],
+      config: { responseMimeType: 'application/json' },
+    });
 
-  bridgeExplain: (messageText: string, uiLang: UiLanguage = 'es') =>
-    serverRequest<BridgeExplanation>('/api/ai/bridge-explain', {
-      method: 'POST',
-      body: JSON.stringify({ messageText, uiLang }),
-    }),
+    return JSON.parse(res.text || '{}');
+  },
 
-  bridgeReplies: (messageText: string, promptContext: string, uiLang: UiLanguage = 'es') =>
-    serverRequest<{ suggestions: BridgeReplySuggestion[] }>('/api/ai/bridge-replies', {
-      method: 'POST',
-      body: JSON.stringify({ messageText, promptContext, uiLang }),
-    }),
+  generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
+    const ai = getAiClient();
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`,
+      config: { responseMimeType: 'application/json' },
+    });
+    return JSON.parse(res.text || '{}');
+  },
 
-  adminTelemetry: () => serverRequest<AdminTelemetryResponse>('/api/admin/telemetry', {}, true),
+  bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise<BridgeExplanation> => {
+    const ai = getAiClient();
+    const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Analiza este mensaje de intercambio de idiomas: "${messageText}". Explica en ${targetLang}. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }`,
+      config: { responseMimeType: 'application/json' },
+    });
+    return JSON.parse(res.text || '{}');
+  },
 
-  adminExtractPdf: (payload: {
+  bridgeReplies: async (
+    messageText: string,
+    promptContext: string,
+    uiLang: UiLanguage = 'es'
+  ): Promise<{ suggestions: BridgeReplySuggestion[] }> => {
+    const ai = getAiClient();
+    const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Contexto del tema: "${promptContext}". Mensaje recibido: "${messageText}". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ${targetLang}. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }`,
+      config: { responseMimeType: 'application/json' },
+    });
+    return JSON.parse(res.text || '{"suggestions":[]}');
+  },
+
+  adminTelemetry: async (): Promise<AdminTelemetryResponse> => ({
+    status: 'ok',
+    activeUsers: 1,
+    totalLessons: 0,
+    totalDictionaryEntries: 0,
+    serverMode: 'client-serverless',
+  } as unknown as AdminTelemetryResponse),
+
+  adminExtractPdf: async (payload: {
     pdfBase64: string;
     mode: 'lesson' | 'dictionary';
     jlptLevel: JlptLevel;
     sourceName: string;
-  }) =>
-    serverRequest<{
-      mode: 'lesson' | 'dictionary';
-      jlptLevel: JlptLevel;
-      sourceName: string;
-      extracted: Record<string, unknown>;
-    }>('/api/admin/extract-pdf', { method: 'POST', body: JSON.stringify(payload) }, true),
+  }) => {
+    const ai = getAiClient();
+    const cleanPdf = payload.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+    const res = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
+        {
+          text: `Extrae contenido educativo de japonés nivel ${payload.jlptLevel} en modo ${payload.mode} desde "${payload.sourceName}". Devuelve JSON estructurado.`,
+        },
+      ],
+      config: { responseMimeType: 'application/json' },
+    });
+    return {
+      mode: payload.mode,
+      jlptLevel: payload.jlptLevel,
+      sourceName: payload.sourceName,
+      extracted: JSON.parse(res.text || '{}'),
+    };
+  },
 };
 
 let currentAudio: HTMLAudioElement | null = null;
 
 export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise<void> {
+  if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
+    return speakJapaneseBrowser(lastSpokenText, lastPace);
+  }
   return new Promise((resolve, reject) => {
     try {
       if (currentAudio) {
