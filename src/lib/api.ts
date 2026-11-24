@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import type {
   AdminTelemetryResponse,
   BridgeExplanation,
@@ -15,6 +15,35 @@ function getAiClient() {
     throw new Error('Falta configurar VITE_GEMINI_API_KEY en las variables de entorno de Vercel.');
   }
   return new GoogleGenAI({ apiKey });
+}
+
+async function generateWithRetry(contents: any, retries = 2): Promise<string> {
+  const ai = getAiClient();
+  const models = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.8-flash'];
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await ai.models.generateContent({
+        model: models[i] || 'gemini-3.8-flash',
+        contents,
+        config: { responseMimeType: 'application/json' },
+      });
+      return res.text || '{}';
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      const isTemporary = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('429');
+      if (isTemporary && i < retries) {
+        await new Promise((r) => setTimeout(r, 1200));
+        continue;
+      }
+      throw new Error(
+        isTemporary
+          ? 'Los servidores de IA están muy ocupados ahora mismo. Inténtalo de nuevo en unos segundos.'
+          : msg
+      );
+    }
+  }
+  return '{}';
 }
 
 function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'): Promise<void> {
@@ -63,7 +92,6 @@ export const api = {
     history: { role: 'user' | 'sensei'; text: string }[];
     uiLang?: UiLanguage;
   }): Promise<OralTurnResponse> => {
-    const ai = getAiClient();
     const uiLang = payload.uiLang || 'es';
     const explanationLang = uiLang === 'ja' ? 'japonés natural' : 'español';
 
@@ -95,13 +123,8 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
       });
     }
 
-    const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: parts,
-      config: { responseMimeType: 'application/json' },
-    });
-
-    const parsed = JSON.parse(res.text || '{}');
+    const raw = await generateWithRetry(parts);
+    const parsed = JSON.parse(raw);
     lastSpokenText = parsed.senseiReplyJa || '';
     lastPace = payload.pace;
 
@@ -118,43 +141,32 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     imageBase64: string;
     uiLang?: UiLanguage;
   }): Promise<WritingEvaluation> => {
-    const ai = getAiClient();
     const langText = payload.uiLang === 'ja' ? 'japonés' : 'español';
     const cleanBase64 = payload.imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-    const res = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: [
-        { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
-        {
-          text: `Evalúa este trazo manuscrito del carácter ${payload.characterType} "${payload.targetCharacter}". Responde en ${langText} en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }`,
-        },
-      ],
-      config: { responseMimeType: 'application/json' },
-    });
+    const raw = await generateWithRetry([
+      { inlineData: { data: cleanBase64, mimeType: 'image/png' } },
+      {
+        text: `Evalúa este trazo manuscrito del carácter ${payload.characterType} "${payload.targetCharacter}". Responde en ${langText} en JSON con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }`,
+      },
+    ]);
 
-    return JSON.parse(res.text || '{}');
+    return JSON.parse(raw);
   },
 
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
-    const ai = getAiClient();
-    const res = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`,
-      config: { responseMimeType: 'application/json' },
-    });
-    return JSON.parse(res.text || '{}');
+    const raw = await generateWithRetry(
+      `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`
+    );
+    return JSON.parse(raw);
   },
 
   bridgeExplain: async (messageText: string, uiLang: UiLanguage = 'es'): Promise<BridgeExplanation> => {
-    const ai = getAiClient();
     const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
-    const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Analiza este mensaje de intercambio de idiomas: "${messageText}". Explica en ${targetLang}. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }`,
-      config: { responseMimeType: 'application/json' },
-    });
-    return JSON.parse(res.text || '{}');
+    const raw = await generateWithRetry(
+      `Analiza este mensaje de intercambio de idiomas: "${messageText}". Explica en ${targetLang}. Devuelve JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }`
+    );
+    return JSON.parse(raw);
   },
 
   bridgeReplies: async (
@@ -162,23 +174,21 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     promptContext: string,
     uiLang: UiLanguage = 'es'
   ): Promise<{ suggestions: BridgeReplySuggestion[] }> => {
-    const ai = getAiClient();
     const targetLang = uiLang === 'ja' ? 'japonés' : 'español';
-    const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Contexto del tema: "${promptContext}". Mensaje recibido: "${messageText}". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ${targetLang}. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }`,
-      config: { responseMimeType: 'application/json' },
-    });
-    return JSON.parse(res.text || '{"suggestions":[]}');
+    const raw = await generateWithRetry(
+      `Contexto del tema: "${promptContext}". Mensaje recibido: "${messageText}". Sugiere 3 respuestas naturales (sencilla, estándar, coloquial) en el idioma opuesto al mensaje recibido, con traducción en ${targetLang}. Devuelve JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }`
+    );
+    return JSON.parse(raw);
   },
 
-  adminTelemetry: async (): Promise<AdminTelemetryResponse> => ({
-    status: 'ok',
-    activeUsers: 1,
-    totalLessons: 0,
-    totalDictionaryEntries: 0,
-    serverMode: 'client-serverless',
-  } as unknown as AdminTelemetryResponse),
+  adminTelemetry: async (): Promise<AdminTelemetryResponse> =>
+    ({
+      status: 'ok',
+      activeUsers: 1,
+      totalLessons: 0,
+      totalDictionaryEntries: 0,
+      serverMode: 'client-serverless',
+    }) as unknown as AdminTelemetryResponse,
 
   adminExtractPdf: async (payload: {
     pdfBase64: string;
@@ -186,23 +196,18 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
     jlptLevel: JlptLevel;
     sourceName: string;
   }) => {
-    const ai = getAiClient();
     const cleanPdf = payload.pdfBase64.replace(/^data:application\/pdf;base64,/, '');
-    const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
-        {
-          text: `Extrae contenido educativo de japonés nivel ${payload.jlptLevel} en modo ${payload.mode} desde "${payload.sourceName}". Devuelve JSON estructurado.`,
-        },
-      ],
-      config: { responseMimeType: 'application/json' },
-    });
+    const raw = await generateWithRetry([
+      { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
+      {
+        text: `Extrae contenido educativo de japonés nivel ${payload.jlptLevel} en modo ${payload.mode} desde "${payload.sourceName}". Devuelve JSON estructurado.`,
+      },
+    ]);
     return {
       mode: payload.mode,
       jlptLevel: payload.jlptLevel,
       sourceName: payload.sourceName,
-      extracted: JSON.parse(res.text || '{}'),
+      extracted: JSON.parse(raw),
     };
   },
 };
