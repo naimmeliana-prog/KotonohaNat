@@ -312,7 +312,7 @@ mode: 'lesson' | 'dictionary';
 jlptLevel: JlptLevel;
 sourceName: string;
 }) => {
-const cleanPdf = payload.pdfBase64.replace(/^data:application/pdf;base64,/, '');
+const cleanPdf = payload.pdfBase64.replace('data:application/pdf;base64,', '');
 const raw = await generateWithRetry([
 { inlineData: { data: cleanPdf, mimeType: 'application/pdf' } },
 {
