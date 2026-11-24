@@ -19,7 +19,7 @@ function getAiClient() {
 
 async function generateWithRetry(contents: any, retries = 2): Promise<string> {
   const ai = getAiClient();
-  const models = ['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+  const models = ['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash'];
 
   for (let i = 0; i <= retries; i++) {
     try {
