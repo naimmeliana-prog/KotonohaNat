@@ -14,12 +14,12 @@ function getAiClient() {
   if (!apiKey) {
     throw new Error('Falta configurar VITE_GEMINI_API_KEY en las variables de entorno de Vercel.');
   }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 }
 
 async function generateWithRetry(contents: any, retries = 2): Promise<string> {
   const ai = getAiClient();
-  const models = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.8-flash'];
+  const models = ['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'];
 
   for (let i = 0; i <= retries; i++) {
     try {
@@ -33,12 +33,12 @@ async function generateWithRetry(contents: any, retries = 2): Promise<string> {
       const msg = String(err?.message || err);
       const isTemporary = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('429');
       if (isTemporary && i < retries) {
-        await new Promise((r) => setTimeout(r, 1200));
+        await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
       throw new Error(
         isTemporary
-          ? 'Los servidores de IA están muy ocupados ahora mismo. Inténtalo de nuevo en unos segundos.'
+          ? 'Los servidores gratuitos de IA están saturados ahora mismo. Espera 5 segundos e inténtalo de nuevo.'
           : msg
       );
     }
