@@ -37,37 +37,29 @@ async function callOpenRouter(promptText: string, imageBase64?: string): Promise
     });
   }
 
-  const modelsToTry = imageBase64
-    ? ['google/gemma-3-27b-it:free', 'qwen/qwen2.5-vl-72b-instruct:free', 'openrouter/free']
-    : ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free', 'openrouter/free'];
+  try {
+    const endpoint = 'https://openrouter.ai' + '/api/v1/chat/completions';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + orKey,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://vercel.app',
+        'X-Title': 'Kotonoha Japonés',
+      },
+      body: JSON.stringify({
+        model: 'openrouter/free',
+        messages: [{ role: 'user', content }],
+      }),
+    });
 
-  for (const model of modelsToTry) {
-    try {
-      const endpoint = 'https://openrouter.ai' + '/api/v1/chat/completions';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + orKey,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://vercel.app',
-          'X-Title': 'Kotonoha Japonés',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content }],
-        }),
-      });
-
-      if (!res.ok) continue;
-      const data = await res.json();
-      const firstChoice = Array.isArray(data?.choices) ? data.choices.at(0) : null;
-      const text = firstChoice?.message?.content;
-      if (text) return text;
-    } catch {
-      continue;
-    }
+    if (!res.ok) return null;
+    const data = await res.json();
+    const firstChoice = Array.isArray(data?.choices) ? data.choices.at(0) : null;
+    return firstChoice?.message?.content || null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 async function generateSmart(
@@ -101,7 +93,7 @@ async function generateSmart(
       }
       if (isBusy) {
         throw new Error(
-          'Has alcanzado el límite gratuito por minuto de Gemini. Espera 30 segundos o añade VITE_OPENROUTER_API_KEY en Vercel.'
+          'Has alcanzado el límite gratuito por minuto de Gemini. Espera 30 segundos o escribe tu respuesta en texto.'
         );
       }
       throw new Error(msg);
@@ -111,11 +103,43 @@ async function generateSmart(
   throw new Error('No se obtuvo respuesta de la IA. Inténtalo de nuevo en unos segundos.');
 }
 
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
+function pcmBase64ToWavBase64(pcmBase64: string, sampleRate = 24000): string {
+  const binary = atob(pcmBase64);
+  const pcmLength = binary.length;
+  const wavBuffer = new ArrayBuffer(44 + pcmLength);
+  const view = new DataView(wavBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
   };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + pcmLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, pcmLength, true);
+
+  const bytes = new Uint8Array(wavBuffer, 44);
+  for (let i = 0; i < pcmLength; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  let wavBinary = '';
+  const fullBytes = new Uint8Array(wavBuffer);
+  for (let i = 0; i < fullBytes.length; i++) {
+    wavBinary += String.fromCharCode(fullBytes[i]);
+  }
+  return btoa(wavBinary);
 }
 
 type VoiceProfile = 'Kore' | 'Puck' | 'Zephyr';
@@ -133,34 +157,9 @@ function speakJapaneseBrowser(
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
-
-    const voices = window.speechSynthesis.getVoices();
-    const jaVoices = voices.filter((v) => v.lang.toLowerCase().includes('ja'));
-
-    const naturalFemale =
-      jaVoices.find((v) => /nanami|kyoko|haruka|ayumi|sayaka|google/i.test(v.name)) ||
-      jaVoices.at(0);
-    const naturalMale =
-      jaVoices.find((v) => /keita|otoya|ichiro|takumi|male/i.test(v.name)) ||
-      jaVoices.at(1) ||
-      naturalFemale;
-
     const baseRate = pace === 'slow' ? 0.78 : 1.0;
-
-    if (voiceProfile === 'Puck') {
-      if (naturalMale) utterance.voice = naturalMale;
-      utterance.pitch = naturalMale && /keita|otoya|ichiro/i.test(naturalMale.name) ? 0.96 : 0.76;
-      utterance.rate = baseRate * 0.96;
-    } else if (voiceProfile === 'Zephyr') {
-      if (naturalFemale) utterance.voice = naturalFemale;
-      utterance.pitch = 1.18;
-      utterance.rate = baseRate * 1.04;
-    } else {
-      if (naturalFemale) utterance.voice = naturalFemale;
-      utterance.pitch = 1.0;
-      utterance.rate = baseRate;
-    }
-
+    utterance.pitch = voiceProfile === 'Puck' ? 0.82 : voiceProfile === 'Zephyr' ? 1.18 : 1.0;
+    utterance.rate = baseRate;
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
     window.speechSynthesis.speak(utterance);
@@ -170,6 +169,7 @@ function speakJapaneseBrowser(
 let lastSpokenText = '';
 let lastPace: 'slow' | 'natural' = 'natural';
 let lastVoice: VoiceProfile = 'Kore';
+let ttsBlockedUntil = 0;
 export const api = {
   synthesizeSpeech: async (
     text: string,
@@ -179,6 +179,55 @@ export const api = {
     lastSpokenText = text;
     lastPace = pace;
     lastVoice = voiceName;
+
+    if (Date.now() < ttsBlockedUntil) {
+      return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
+    }
+
+    try {
+      const ai = getAiClient();
+      if (ai) {
+        const stylePrompt =
+          pace === 'slow'
+            ? 'Lee en japonés de forma clara y ligeramente pausada: '
+            : 'Lee en japonés con entonación natural y humana: ';
+        const res = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-preview-tts',
+          contents: [{ parts: [{ text: stylePrompt + text }] }],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName },
+              },
+            },
+          },
+        });
+        const firstCandidate = Array.isArray(res.candidates) ? res.candidates.at(0) : null;
+        const firstPart = Array.isArray(firstCandidate?.content?.parts) ? firstCandidate.content.parts.at(0) : null;
+        const inlineData = firstPart?.inlineData;
+
+        if (inlineData?.data) {
+          const mime = inlineData.mimeType || 'audio/L16;rate=24000';
+          if (mime.includes('L16') || mime.includes('pcm')) {
+            const rateMatch = mime.match(/rate=(\d+)/);
+            const rate = rateMatch ? Number(rateMatch.at(1)) : 24000;
+            return {
+              audioBase64: pcmBase64ToWavBase64(inlineData.data, rate),
+              mimeType: 'audio/wav',
+            };
+          }
+          return {
+            audioBase64: inlineData.data,
+            mimeType: mime,
+          };
+        }
+      }
+    } catch (err: any) {
+      if (String(err?.message || err).includes('429')) {
+        ttsBlockedUntil = Date.now() + 60000;
+      }
+    }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
 
@@ -211,7 +260,7 @@ export const api = {
       explanationLang +
       '", "pronunciationScore": 85, "feedbackEs": "consejo breve y amable en ' +
       explanationLang +
-      '", "correctedJa": "forma más natural de decirlo en japonés (o la misma si ya es perfecta)", "senseiReplyJa": "tu respuesta en japonés para continuar la conversación según el nivel ' +
+      '", "correctedJa": "forma más natural de decirlo en japonés", "senseiReplyJa": "tu respuesta en japonés para continuar la conversación según el nivel ' +
       payload.jlptLevel +
       '", "senseiReplyReading": "lectura en hiragana de tu respuesta", "senseiReplyRomaji": "romaji de tu respuesta", "senseiReplyEs": "traducción de tu respuesta al ' +
       explanationLang +
@@ -235,9 +284,18 @@ export const api = {
     lastVoice = payload.voiceName;
 
     return {
-      ...parsed,
-      audioBase64: parsed.senseiReplyJa ? 'BROWSER_TTS' : null,
-      audioMimeType: 'audio/browser-tts',
+      userTranscriptJa: parsed.userTranscriptJa || payload.userText || '...',
+      userTranscriptReading: parsed.userTranscriptReading || '',
+      userMeaningEs: parsed.userMeaningEs || '',
+      pronunciationScore: Number(parsed.pronunciationScore) || 85,
+      feedbackEs: parsed.feedbackEs || '',
+      correctedJa: parsed.correctedJa || parsed.userTranscriptJa || '',
+      senseiReplyJa: parsed.senseiReplyJa || 'いいですね！続けましょう。',
+      senseiReplyReading: parsed.senseiReplyReading || '',
+      senseiReplyRomaji: parsed.senseiReplyRomaji || '',
+      senseiReplyEs: parsed.senseiReplyEs || '',
+      audioBase64: null,
+      audioMimeType: null,
     };
   },
 
@@ -258,7 +316,7 @@ export const api = {
       payload.targetCharacter +
       '". Responde ÚNICAMENTE en JSON válido en ' +
       langText +
-      ' con: { "score": number (0-100), "isCorrect": boolean, "feedback": string, "tips": string[] }';
+      ' con esta estructura exacta: { "score": 85, "isCorrect": true, "feedback": "comentario breve", "tips": ["consejo 1", "consejo 2"] }';
 
     const raw = await generateSmart(
       [
@@ -268,7 +326,18 @@ export const api = {
       { promptText, imageBase64: cleanBase64 }
     );
 
-    return extractJsonObject(raw);
+    const parsed = extractJsonObject(raw);
+    return {
+      score: typeof parsed.score === 'number' ? parsed.score : 80,
+      isCorrect: typeof parsed.isCorrect === 'boolean' ? parsed.isCorrect : true,
+      feedback: parsed.feedback || 'Buen intento, sigue practicando el equilibrio de los trazos.',
+      tips: Array.isArray(parsed.tips) ? parsed.tips : [],
+      strokeOrderTips: Array.isArray(parsed.strokeOrderTips)
+        ? parsed.strokeOrderTips
+        : Array.isArray(parsed.tips)
+          ? parsed.tips
+          : [],
+    } as WritingEvaluation;
   },
 
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
@@ -289,7 +358,12 @@ export const api = {
       targetLang +
       '. Devuelve ÚNICAMENTE JSON: { "translation": string, "reading": string, "grammarNotes": [{ "point": string, "explanation": string }] }';
     const raw = await generateSmart(promptText, { promptText });
-    return extractJsonObject(raw);
+    const parsed = extractJsonObject(raw);
+    return {
+      translation: parsed.translation || '',
+      reading: parsed.reading || '',
+      grammarNotes: Array.isArray(parsed.grammarNotes) ? parsed.grammarNotes : [],
+    };
   },
 
   bridgeReplies: async (
@@ -307,7 +381,10 @@ export const api = {
       targetLang +
       '. Devuelve ÚNICAMENTE JSON: { "suggestions": [{ "tone": string, "text": string, "reading": string, "translation": string }] }';
     const raw = await generateSmart(promptText, { promptText });
-    return extractJsonObject(raw);
+    const parsed = extractJsonObject(raw);
+    return {
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+    };
   },
 
   adminTelemetry: async (): Promise<AdminTelemetryResponse> =>
@@ -354,23 +431,23 @@ export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise
   if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
     return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
   }
-  return new Promise((resolve, reject) => {
-    try {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-      }
-      const audio = new Audio('data:' + mimeType + ';base64,' + base64);
-      currentAudio = audio;
-      audio.onended = () => resolve();
-      audio.onerror = () => {
-        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
-      };
-      audio.play().catch(() => {
-        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
-      });
-    } catch (e) {
-      reject(e);
-    }
-  });
+return new Promise((resolve, reject) => {
+try {
+if (currentAudio) {
+currentAudio.pause();
+currentAudio = null;
+}
+const audio = new Audio('data:' + mimeType + ';base64,' + base64);
+currentAudio = audio;
+audio.onended = () => resolve();
+audio.onerror = () => {
+speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+};
+audio.play().catch(() => {
+speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+});
+} catch (e) {
+reject(e);
+}
+});
 }
