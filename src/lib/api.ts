@@ -46,7 +46,14 @@ async function generateWithRetry(contents: any, retries = 2): Promise<string> {
   return '{}';
 }
 
-ffunction speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'): Promise<void> {
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
+
+function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural'): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve();
@@ -61,7 +68,6 @@ ffunction speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural
     const voices = window.speechSynthesis.getVoices();
     const jaVoices = voices.filter((v) => v.lang.toLowerCase().includes('ja'));
 
-    // Prioriza voces naturales/neuronales de Edge, Chrome o Apple (Kyoko/Otoya)
     const bestVoice =
       jaVoices.find((v) => /natural|neural|nanami|keita|google/i.test(v.name)) ||
       jaVoices.find((v) => /kyoko|otoya|haruka|ichiro/i.test(v.name)) ||
@@ -74,7 +80,6 @@ ffunction speakJapaneseBrowser(text: string, pace: 'slow' | 'natural' = 'natural
     window.speechSynthesis.speak(utterance);
   });
 }
-
 
 let lastSpokenText = '';
 let lastPace: 'slow' | 'natural' = 'natural';
