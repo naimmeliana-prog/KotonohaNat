@@ -120,7 +120,7 @@ let lastPace: 'slow' | 'natural' = 'natural';
 let lastVoice: VoiceProfile = 'Kore';
 
 export const api = {
-  synthesizeSpeech: async (
+    synthesizeSpeech: async (
     text: string,
     voiceName: VoiceProfile = 'Kore',
     pace: 'slow' | 'natural' = 'natural'
@@ -128,6 +128,34 @@ export const api = {
     lastSpokenText = text;
     lastPace = pace;
     lastVoice = voiceName;
+    try {
+      const ai = getAiClient();
+      const stylePrompt =
+        pace === 'slow'
+          ? 'Lee en japonés de forma clara, amable y ligeramente pausada para un estudiante: '
+          : 'Lee en japonés con entonación natural y expresiva: ';
+      const res = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text: stylePrompt + text }] }],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName },
+            },
+          },
+        },
+      });
+      const inlineData = res.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      if (inlineData?.data) {
+        return {
+          audioBase64: inlineData.data,
+          mimeType: inlineData.mimeType || 'audio/wav',
+        };
+      }
+    } catch {
+      // Si el modelo de audio está saturado, usa la voz del navegador sin dar error
+    }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
 
