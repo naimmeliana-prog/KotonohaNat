@@ -209,7 +209,20 @@ Responde ÚNICAMENTE en JSON válido con esta estructura exacta:
 
     return JSON.parse(raw);
   },
-
+if (currentAudio) {
+currentAudio.pause();
+currentAudio = null;
+}
+const audio = new Audio('data:' + mimeType + ';base64,' + base64);
+currentAudio = audio;
+audio.onended = () => resolve();
+audio.onerror = () => reject(new Error('No se pudo reproducir el audio.'));
+audio.play().catch(reject);
+} catch (e) {
+reject(e);
+}
+});
+}
   generateDailyPrompt: async (uiLang: UiLanguage = 'es') => {
     const raw = await generateWithRetry(
       `Genera una pregunta diaria interesante para intercambio cultural entre hispanohablantes y japoneses (idioma UI: ${uiLang}). Devuelve JSON: { "promptEs": string, "promptJa": string, "topicTag": string }`
