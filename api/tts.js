@@ -1,17 +1,23 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const text = body.text || req.query.text || '';
-    const voiceName = body.voiceName || req.query.voiceName || 'Puck';
-    const pace = body.pace || req.query.pace || 'natural';
+    const text = body.text || req.query?.text || '';
+    const voiceName = body.voiceName || req.query?.voiceName || 'Puck';
+    const pace = body.pace || req.query?.pace || 'natural';
 
     if (!text) return res.status(400).json({ error: 'Falta texto' });
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Falta GEMINI_API_KEY en Vercel' });
 
-    const url = 'https://googleapis.com' + apiKey;
-    const prompt = (pace === 'slow' ? 'Lee en japonés despacio y claro: ' : 'Lee en japonés natural: ') + String(text).slice(0, 220);
+    const url =
+      ['https:/', '://googleapis.com', 'v1beta', 'models', 'gemini-2.5-flash-preview-tts:generateContent'].join('/') +
+      '?key=' +
+      apiKey;
+
+    const prompt =
+      (pace === 'slow' ? 'Lee en japonés despacio y claro: ' : 'Lee en japonés natural: ') +
+      String(text).slice(0, 220);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -30,7 +36,7 @@ module.exports = async function handler(req, res) {
       return res.status(response.status).json({ error: data.error?.message || 'Error API Gemini' });
     }
 
-    const part = data.candidates?.[0]?.content?.parts?.[0];
+    const part = data.candidates?.at(0)?.content?.parts?.at(0);
     if (!part?.inlineData?.data) {
       return res.status(502).json({ error: 'Gemini no devolvió audio' });
     }
@@ -56,4 +62,4 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: String(err.message || err) });
   }
-};
+}
