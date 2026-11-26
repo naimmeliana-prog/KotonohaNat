@@ -365,5 +365,43 @@ export function HiraganaView({ onGoToWritingPractice }: HiraganaViewProps) {
         </div>
       )}
 
-      {tab === 'rules' && (
+            {tab === 'rules' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#171A21] border border-[#DFD9CD] dark:border-[#252A34] space-y-2">
+            <h3 className="font-semibold text-base text-[#1A1D21] dark:text-[#F2EFE9]">
+              1. Partículas con lectura especial (は・へ・を)
+            </h3>
+            <ul className="text-sm text-[#5A606B] dark:text-[#9BA1AE] space-y-1.5 list-disc pl-5">
+              <li>
+                <strong>は (ha) → se lee «wa»</strong> cuando marca el tema de la oración (ej. わたし<strong>は</strong>).
+              </li>
+              <li>
+                <strong>へ (he) → se lee «e»</strong> cuando indica dirección hacia un lugar (ej. がっこう<strong>へ</strong>).
+              </li>
+              <li>
+                <strong>を (wo) → se lee «o»</strong> cuando marca el objeto directo (ej. みず<strong>を</strong>のみます).
+              </li>
+            </ul>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#171A21] border border-[#DFD9CD] dark:border-[#252A34] space-y-2">
+            <h3 className="font-semibold text-base text-[#1A1D21] dark:text-[#F2EFE9]">
+              2. Doble consonante (っ pequeña) y vocales largas
+            </h3>
+            <ul className="text-sm text-[#5A606B] dark:text-[#9BA1AE] space-y-1.5 list-disc pl-5">
+              <li>
+                <strong>っ (tsu pequeña):</strong> Duplica la consonante siguiente haciendo una breve pausa (ej. き<strong>っ</strong>て = <em>kitte</em>, sello).
+              </li>
+              <li>
+                <strong>Vocales alargadas:</strong> La <strong>o</strong> se alarga con <strong>う</strong> (ひこ<strong>う</strong>き = <em>hikōki</em>) y la <strong>e</strong> con <strong>い</strong> (とけ<strong>い</strong> = <em>tokei</em>).
+              </li>
+              <li>
+                <strong>Sonidos diferentes:</strong> No existen <em>si, ti, tu</em>; en su lugar se usan <strong>し (shi), ち (chi), つ (tsu)</strong>.
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
