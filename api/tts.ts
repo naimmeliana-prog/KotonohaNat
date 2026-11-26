@@ -3,7 +3,7 @@ export default async function handler(req: any, res: any) {
   if (!text) return res.status(400).json({ error: 'Falta texto' });
 
   try {
-    const baseUrl = 'https://' + '://soundoftext.com';
+   const baseUrl = 'https://' + 'api.' + 'soundoftext.com' + '/sounds';
 
     const createRes = await fetch(baseUrl, {
       method: 'POST',
