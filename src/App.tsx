@@ -14,6 +14,7 @@ import { CoursesView } from './components/CoursesView';
 import { DashboardView } from './components/DashboardView';
 import { DictionaryView } from './components/DictionaryView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { HiraganaView } from './components/HiraganaView';
 import { LanguageExchangeView } from './components/LanguageExchangeView';
 import { Navbar, type NavSection } from './components/Navbar';
 import { PracticeView, type PracticeMode } from './components/PracticeView';
@@ -123,7 +124,6 @@ export default function App() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   return (
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col bg-[#F7F5F0] dark:bg-[#111317] text-[#1A1D21] dark:text-[#F2EFE9] transition-colors duration-200">
@@ -152,6 +152,10 @@ export default function App() {
                   onNavigate={handleNavigate}
                   onOpenAuth={() => setAuthModalOpen(true)}
                 />
+              )}
+
+              {activeSection === 'hiragana' && (
+                <HiraganaView onGoToWritingPractice={() => handleNavigate('practica', 'escritura')} />
               )}
 
               {activeSection === 'cursos' && (
@@ -222,20 +226,16 @@ export default function App() {
                 className="inline-flex items-center gap-1.5 hover:text-[#1A1D21] dark:hover:text-[#F2EFE9] transition-colors cursor-pointer"
               >
                 {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                {darkMode ? t.footer.lightTheme : t.footer.darkTheme}
+                <span>{darkMode ? t.footer.lightMode : t.footer.darkMode}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleNavigate('admin')}
-                className={`inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  activeSection === 'admin'
-                    ? 'text-[#C9372C] dark:text-[#E04F44] font-medium'
-                    : 'hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
-                }`}
+                className="inline-flex items-center gap-1.5 hover:text-[#1A1D21] dark:hover:text-[#F2EFE9] transition-colors cursor-pointer"
               >
                 <Shield className="w-3.5 h-3.5" />
-                {t.footer.adminPanel}
+                <span>{t.navbar.admin}</span>
               </button>
             </div>
           </div>
@@ -244,9 +244,9 @@ export default function App() {
         <AuthModal
           open={authModalOpen}
           onClose={() => setAuthModalOpen(false)}
-          user={user}
-          onAuthChange={(u) => {
-            setUser(u);
+          onAuthenticated={(authUser) => {
+            setUser(authUser);
+            setAuthModalOpen(false);
           }}
         />
       </div>
