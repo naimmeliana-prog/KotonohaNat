@@ -3,8 +3,9 @@ export default async function handler(req: any, res: any) {
   if (!text) return res.status(400).json({ error: 'Falta texto' });
 
   try {
-    // 1. Crea el audio en SoundOfText (japonés natural gratuito)
-    const createRes = await fetch('https://soundoftext.com', {
+    const baseUrl = 'https://' + '://soundoftext.com';
+
+    const createRes = await fetch(baseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -15,9 +16,8 @@ export default async function handler(req: any, res: any) {
     const created = await createRes.json();
     if (!created?.id) throw new Error('No se pudo generar ID de audio');
 
-    // 2. Espera brevemente y descarga el MP3 generado
-    await new Promise((r) => setTimeout(r, 700));
-    const statusRes = await fetch('https://soundoftext.com/' + created.id);
+    await new Promise((r) => setTimeout(r, 800));
+    const statusRes = await fetch(baseUrl + '/' + created.id);
     const statusData = await statusRes.json();
     if (!statusData?.location) throw new Error('Audio aún no disponible');
 
