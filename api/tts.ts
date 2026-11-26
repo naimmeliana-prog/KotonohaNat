@@ -1,61 +1,59 @@
-export default async function handler(req: any, res: any) {
-  const { text = '', voiceName = 'Puck', pace = 'natural' } = req.body || req.query || {};
-  if (!text) return res.status(400).json({ error: 'Falta texto' });
-
-  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Falta GEMINI_API_KEY en Vercel' });
-
+module.exports = async function handler(req, res) {
   try {
-    const endpoint =
-      ['https:/', '://googleapis.com', 'v1beta', 'models', 'gemini-2.5-flash-preview-tts:generateContent'].join('/') +
-      '?key=' +
-      apiKey;
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const text = body.text || req.query.text || '';
+    const voiceName = body.voiceName || req.query.voiceName || 'Puck';
+    const pace = body.pace || req.query.pace || 'natural';
 
-    const prompt =
-      (pace === 'slow' ? 'Lee en japonés de forma clara y pausada: ' : 'Lee en japonés con voz natural y humana: ') +
-      String(text).slice(0, 220);
+    if (!text) return res.status(400).json({ error: 'Falta texto' });
 
-    const apiRes = await fetch(endpoint, {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Falta GEMINI_API_KEY en Vercel' });
+
+    const url = 'https://googleapis.com' + apiKey;
+    const prompt = (pace === 'slow' ? 'Lee en japonés despacio y claro: ' : 'Lee en japonés natural: ') + String(text).slice(0, 220);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName },
-            },
-          },
-        },
-      }),
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } }
+        }
+      })
     });
 
-    const data = await apiRes.json();
-    const inlineData = data?.candidates?.at(0)?.content?.parts?.at(0)?.inlineData;
-    if (!inlineData?.data) {
-      return res.status(502).json({ error: data?.error?.message || 'Sin audio devuelto por Gemini' });
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Error API Gemini' });
     }
 
-    const pcmBuffer = Buffer.from(inlineData.data, 'base64');
-    const wavHeader = Buffer.alloc(44);
-    wavHeader.write('RIFF', 0);
-    wavHeader.writeUInt32LE(36 + pcmBuffer.length, 4);
-    wavHeader.write('WAVE', 8);
-    wavHeader.write('fmt ', 12);
-    wavHeader.writeUInt32LE(16, 16);
-    wavHeader.writeUInt16LE(1, 20);
-    wavHeader.writeUInt16LE(1, 22);
-    wavHeader.writeUInt32LE(24000, 24);
-    wavHeader.writeUInt32LE(48000, 28);
-    wavHeader.writeUInt16LE(2, 32);
-    wavHeader.writeUInt16LE(16, 34);
-    wavHeader.write('data', 36);
-    wavHeader.writeUInt32LE(pcmBuffer.length, 40);
+    const part = data.candidates?.[0]?.content?.parts?.[0];
+    if (!part?.inlineData?.data) {
+      return res.status(502).json({ error: 'Gemini no devolvió audio' });
+    }
 
-    const wavBase64 = Buffer.concat([wavHeader, pcmBuffer]).toString('base64');
-    return res.status(200).json({ audioBase64: wavBase64, mimeType: 'audio/wav' });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message || 'Error interno en TTS' });
+    const pcm = Buffer.from(part.inlineData.data, 'base64');
+    const wav = Buffer.alloc(44 + pcm.length);
+    wav.write('RIFF', 0);
+    wav.writeUInt32LE(36 + pcm.length, 4);
+    wav.write('WAVE', 8);
+    wav.write('fmt ', 12);
+    wav.writeUInt32LE(16, 16);
+    wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(24000, 24);
+    wav.writeUInt32LE(48000, 28);
+    wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34);
+    wav.write('data', 36);
+    wav.writeUInt32LE(pcm.length, 40);
+    pcm.copy(wav, 44);
+
+    return res.status(200).json({ audioBase64: wav.toString('base64'), mimeType: 'audio/wav' });
+  } catch (err) {
+    return res.status(500).json({ error: String(err.message || err) });
   }
-}
+};
