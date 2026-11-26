@@ -5,6 +5,7 @@ import type { AuthUser } from '../types/kotonoha';
 
 export type NavSection =
   | 'inicio'
+  | 'hiragana'
   | 'cursos'
   | 'practica'
   | 'diccionario'
@@ -25,6 +26,7 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
 
   const navItems: { id: NavSection; label: string }[] = [
     { id: 'inicio', label: t.navbar.inicio },
+    { id: 'hiragana', label: lang === 'ja' ? 'ひらがな' : 'Hiragana' },
     { id: 'cursos', label: t.navbar.cursos },
     { id: 'practica', label: t.navbar.practica },
     { id: 'diccionario', label: t.navbar.diccionario },
@@ -40,7 +42,6 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
   return (
     <header className="sticky top-0 z-40 bg-[#F7F5F0]/95 dark:bg-[#111317]/95 backdrop-blur-md border-b border-[#DFD9CD] dark:border-[#252A34]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        {/* Zone 1: Single-element display wordmark */}
         <button
           type="button"
           onClick={() => handleNav('inicio')}
@@ -49,7 +50,6 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
           Kotonoha
         </button>
 
-        {/* Zone 2: Clean single-line navigation links */}
         <nav aria-label={t.navbar.ariaNav} className="hidden lg:flex items-center gap-6">
           {navItems.map((item) => {
             const active = activeSection === item.id;
@@ -76,7 +76,6 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
           })}
         </nav>
 
-        {/* Zone 3: Prominent Language Switcher + Primary Auth Action */}
         <div className="flex items-center gap-2.5 shrink-0">
           <div
             role="group"
@@ -126,7 +125,6 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
         </div>
       </div>
 
-      {/* Mobile navigation drawer */}
       {mobileOpen && (
         <div className="lg:hidden border-t border-[#DFD9CD] dark:border-[#252A34] bg-[#F7F5F0] dark:bg-[#111317] px-6 py-4 flex flex-col gap-2">
           {navItems.map((item) => {
