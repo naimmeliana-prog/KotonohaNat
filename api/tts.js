@@ -7,13 +7,12 @@ export default async function handler(req, res) {
 
     if (!text) return res.status(400).json({ error: 'Falta texto' });
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Falta GEMINI_API_KEY en Vercel' });
 
-    const url =
-      ['https:/', '://googleapis.com', 'v1beta', 'models', 'gemini-2.5-flash-preview-tts:generateContent'].join('/') +
-      '?key=' +
-      apiKey;
+    const host = 'generativelanguage' + '.googleapis.com';
+    const url = 'https://' + host + '/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=' + apiKey;
+
 
     const prompt =
       (pace === 'slow' ? 'Lee en japonés despacio y claro: ' : 'Lee en japonés natural: ') +
