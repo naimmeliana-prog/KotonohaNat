@@ -77,7 +77,7 @@ async function transcribeWithGroq(audioBase64: string, mimeType: string): Promis
     formData.append('model', 'whisper-large-v3-turbo');
     formData.append('language', 'ja');
 
-    const endpoint = 'https://' + '://groq.com';
+    const endpoint = ['https:/', 'api.groq.com', 'openai', 'v1', 'audio', 'transcriptions'].join('/');
 
     const res = await fetch(endpoint, {
       method: 'POST',
