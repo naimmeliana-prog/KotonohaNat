@@ -181,12 +181,13 @@ export const api = {
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
 
-  alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
-    const promptText = `Divide esta frase japonesa en bloques naturales de palabras y empareja cada bloque con su traduccion en espanol. Japones: ${ja}. Espanol: ${es}. Devuelve JSON: { "pairs": [{ "ja": "bloque", "es": "traduccion" }] }`;
+    alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
+    const promptText = `Separa esta oracion japonesa PALABRA POR PALABRA (nunca frases completas, minimo 3 palabras si la frase tiene varias palabras) y empareja cada palabra con su equivalente exacto en espanol. Ejemplo: Japones: "お弁当は温めますか？" Espanol: "¿Le caliento el bento?" -> { "pairs": [{ "ja": "お弁当は", "es": "el bento" }, { "ja": "温めますか？", "es": "¿Le caliento?" }] }. Ahora hazlo con: Japones: "${ja}" Espanol: "${es}". Responde SOLO JSON valido.`;
     const raw = await generateSmart(promptText, { promptText });
     const parsed = extractJsonObject(raw);
     return Array.isArray(parsed?.pairs) ? parsed.pairs : [];
   },
+
   sendOralTurn: async (payload: {
     audioBase64?: string;
     audioMimeType?: string;
