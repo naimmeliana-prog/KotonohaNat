@@ -154,17 +154,11 @@ let lastVoice: VoiceProfile = 'Puck';
 
 export const api = {
   synthesizeSpeech: async (
-    alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
-    const promptText = `Divide esta frase japonesa en bloques naturales de palabras y empareja cada bloque con su traduccion exacta en espanol. Japones: ${ja}. Espanol: ${es}. Devuelve JSON valido con formato: { "pairs": [{ "ja": "bloque", "es": "traduccion" }] }`;
-
-    const raw = await generateSmart(promptText, { promptText });
-    const parsed = extractJsonObject(raw);
-    return Array.isArray(parsed?.pairs) ? parsed.pairs : [];
-  },
     text: string,
-    voiceName: VoiceProfile = 'Puck',
+    _voiceName: VoiceProfile = 'Puck',
     pace: 'slow' | 'natural' = 'natural'
   ) => {
+    const voiceName: VoiceProfile = 'Puck';
     lastSpokenText = text;
     lastPace = pace;
     lastVoice = voiceName;
@@ -185,6 +179,13 @@ export const api = {
       // Fallback al navegador
     }
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
+  },
+
+  alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
+    const promptText = `Divide esta frase japonesa en bloques naturales de palabras y empareja cada bloque con su traduccion en espanol. Japones: ${ja}. Espanol: ${es}. Devuelve JSON: { "pairs": [{ "ja": "bloque", "es": "traduccion" }] }`;
+    const raw = await generateSmart(promptText, { promptText });
+    const parsed = extractJsonObject(raw);
+    return Array.isArray(parsed?.pairs) ? parsed.pairs : [];
   },
   sendOralTurn: async (payload: {
     audioBase64?: string;
