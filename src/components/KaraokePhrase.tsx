@@ -17,16 +17,42 @@ const PAIR_COLORS = [
 ];
 
 function quickSegmentJa(ja: string): string[] {
-  const chunks = ja.match(/[^、。！？\s]+[、。！？]?/g) || [ja];
-  const result: string[] = [];
-  for (const chunk of chunks) {
-    const parts = chunk.split(/(は|が|を|に|へ|で|と|も|の|から|まで|です|ます|ました|ません)/g).filter(Boolean);
-    for (let i = 0; i < parts.length; i++) {
-      if (i > 0 && /^(は|が|を|に|へ|で|と|も|の|から|まで|です|ます|ました|ません)$/.test(parts[i])) {
-        result[result.length - 1] += parts[i];
-      } else {
-        result.push(parts[i]);
+  try {
+    if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+      const segmenter = new (Intl as any).Segmenter('ja', { granularity: 'word' });
+      const rawSegments: string[] = Array.from(segmenter.segment(ja))
+        .map((s: any) => String(s.segment).trim())
+        .filter(Boolean);
+
+      const merged: string[] = [];
+      for (const seg of rawSegments) {
+        const isParticleOrSuffix = /^(は|が|を|に|へ|で|と|も|の|から|まで|よ|ね|か|ます|ました|ません|です|でした|ください|、|。|！|？)$/.test(
+          seg
+        );
+        if (merged.length > 0 && isParticleOrSuffix) {
+          merged[merged.length - 1] += seg;
+        } else {
+          merged.push(seg);
+        }
       }
+      if (merged.length > 1) return merged;
+    }
+  } catch {
+    // Fallback abajo
+  }
+
+  const parts = ja
+    .split(/(は|が|を|に|へ|で|と|も|の|から|まで|です|ます|ました|ません|、|。|！|？)/g)
+    .filter(Boolean);
+  const result: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (
+      i > 0 &&
+      /^(は|が|を|に|へ|で|と|も|の|から|まで|です|ます|ました|ません|、|。|！|？)$/.test(parts[i])
+    ) {
+      result[result.length - 1] += parts[i];
+    } else {
+      result.push(parts[i]);
     }
   }
   return result.length > 0 ? result : [ja];
