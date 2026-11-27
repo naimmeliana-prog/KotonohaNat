@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from '
 import { buildGuestSrsCards } from '../data/seedCatalog';
 import { formatT } from '../i18n/translations';
 import { useLanguage } from '../i18n/LanguageContext';
+import { KaraokePhrase } from './KaraokePhrase';
 import { api, playBase64Audio } from '../lib/api';
 import {
   createUserSrsCard,
@@ -318,6 +319,7 @@ export function PracticeView({
   const [oralInput, setOralInput] = useState('');
   const [oralLoading, setOralLoading] = useState(false);
   const [oralError, setOralError] = useState<string | null>(null);
+  const [playingTurnId, setPlayingTurnId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -336,18 +338,26 @@ export function PracticeView({
     setOralError(null);
   };
 
-  const playSenseiLine = async (ja: string, cachedB64?: string | null, cachedMime?: string | null) => {
-    try {
-      if (cachedB64) {
-        await playBase64Audio(cachedB64, cachedMime || 'audio/wav');
-        return;
-      }
-      const tts = await api.synthesizeSpeech(ja, voiceName, pace);
-      await playBase64Audio(tts.audioBase64, tts.mimeType);
-    } catch (err) {
-      setOralError(err instanceof Error ? err.message : p.audioPlayError);
+  const playSenseiLine = async (
+  ja: string,
+  cachedB64?: string | null,
+  cachedMime?: string | null,
+  turnId?: string
+) => {
+  if (turnId) setPlayingTurnId(turnId);
+  try {
+    if (cachedB64) {
+      await playBase64Audio(cachedB64, cachedMime || 'audio/wav');
+      return;
     }
-  };
+    const tts = await api.synthesizeSpeech(ja, voiceName, pace);
+    await playBase64Audio(tts.audioBase64, tts.mimeType);
+  } catch (err) {
+    setOralError(err instanceof Error ? err.message : p.audioPlayError);
+  } finally {
+    setPlayingTurnId(null);
+  }
+};
 
   const submitOralPayload = async (payload: { audioBase64?: string; audioMimeType?: string; userText?: string }) => {
     setOralLoading(true);
@@ -748,28 +758,31 @@ export function PracticeView({
             <div className="p-6 space-y-6 max-h-[520px] overflow-y-auto">
               {turns.map((turn) => (
                 <div key={turn.id} className="space-y-3">
-                  {turn.role === 'sensei' ? (
-                    <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#F7F5F0] dark:bg-[#111317]">
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-[#C9372C] dark:text-[#E04F44]">Haruka-sensei</p>
-                        <p className="font-jp text-base font-medium text-[#1A1D21] dark:text-[#F2EFE9]">{turn.ja}</p>
-                        {turn.reading && (
-                          <p className="font-jp text-xs text-[#5A606B] dark:text-[#9BA1AE]">
-                            {turn.reading} {turn.romaji ? `· ${turn.romaji}` : ''}
-                          </p>
-                        )}
-                        {turn.es && <p className="text-sm text-[#4A505A] dark:text-[#B3B8C4]">{turn.es}</p>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => playSenseiLine(turn.ja, turn.audioBase64, turn.audioMimeType)}
-                        aria-label={p.senseiHeader}
-                        className="p-2.5 rounded-lg border border-[#DFD9CD] dark:border-[#2C323E] bg-white dark:bg-[#191C22] text-[#1E3A5F] dark:text-[#7FAEE3] hover:border-[#C9372C] hover:text-[#C9372C] shrink-0 cursor-pointer"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
+                                 {turn.role === 'sensei' ? (
+                 <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#F7F5F0] dark:bg-[#111317]">
+                   <div className="space-y-2 flex-1">
+                     <p className="text-xs font-medium text-[#C9372C] dark:text-[#E04F44]">Sensei</p>
+                     <KaraokePhrase
+                       ja={turn.ja}
+                       es={turn.es}
+                       isPlaying={playingTurnId === turn.id}
+                     />
+                     {turn.reading && (
+                       <p className="font-jp text-xs text-[#5A606B] dark:text-[#9BA1AE]">
+                         {turn.reading} {turn.romaji ? `· ${turn.romaji}` : ''}
+                       </p>
+                     )}
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => playSenseiLine(turn.ja, turn.audioBase64, turn.audioMimeType, turn.id)}
+                     aria-label={p.senseiHeader}
+                     className="p-2.5 rounded-lg border border-[#DFD9CD] dark:border-[#2C323E] bg-white dark:bg-[#191C22] text-[#1E3A5F] dark:text-[#7FAEE3] hover:border-[#C9372C] hover:text-[#C9372C] shrink-0 cursor-pointer"
+                   >
+                     <Volume2 className="w-4 h-4" />
+                   </button>
+                 </div>
+               ) : (
                     <div className="space-y-3">
                       <div className="p-4 rounded-xl border border-[#1E3A5F]/25 dark:border-[#5B8CC4]/30 bg-white dark:bg-[#1C212B]">
                         <div className="flex items-center justify-between gap-3">
