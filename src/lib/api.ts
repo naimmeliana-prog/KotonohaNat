@@ -154,6 +154,17 @@ let lastVoice: VoiceProfile = 'Puck';
 
 export const api = {
   synthesizeSpeech: async (
+      alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
+    const promptText =
+      'Divide esta frase en japonés en bloques naturales de palabras/partículas y empareja cada bloque con su traducción exacta en español usando el orden natural del japonés. ' +
+      'Japonés: "' + ja + '". Español: "' + es + '". ' +
+      'Responde ÚNICAMENTE en JSON válido con este formato exacto: { "pairs": [{ "ja": "私は", "es": "Yo" }, { "ja": "水を", "es": "agua" }, { "ja": "飲みます。", "es": "bebo." }] }';
+
+    const raw = await generateSmart(promptText, { promptText });
+    const parsed = extractJsonObject(raw);
+    return Array.isArray(parsed?.pairs) ? parsed.pairs : [];
+  },
+
     text: string,
     voiceName: VoiceProfile = 'Puck',
     pace: 'slow' | 'natural' = 'natural'
