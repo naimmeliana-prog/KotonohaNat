@@ -249,9 +249,60 @@ export function PracticeView({
   onRefreshDashboard,
   onRequireAuth,
 }: PracticeViewProps) {
-  const { lang, t } = useLanguage();
+    const { lang, t } = useLanguage();
   const p = t.practice;
-  const scenarios = p.scenarios;
+  const EXTRA_SCENARIOS = [
+    {
+      id: 'konbini',
+      label: lang === 'ja' ? 'コンビニで買い物' : 'Comprar en un Konbini',
+      openingJa: 'いらっしゃいませ！お弁当は温めますか？',
+      openingSub: '¡Bienvenido! ¿Le caliento el bentō?',
+    },
+    {
+      id: 'station',
+      label: lang === 'ja' ? '駅で切符を買う' : 'En la estación de tren',
+      openingJa: 'こんにちは。どちらまで行きますか？',
+      openingSub: 'Hola. ¿Hasta dónde viaja?',
+    },
+    {
+      id: 'izakaya',
+      label: lang === 'ja' ? '居酒屋で注文' : 'Pedir en un Izakaya',
+      openingJa: 'いらっしゃいませ！まずお飲み物は何になさいますか？',
+      openingSub: '¡Bienvenidos! ¿Qué desean tomar para empezar?',
+    },
+    {
+      id: 'hotel',
+      label: lang === 'ja' ? 'ホテルのチェックイン' : 'Check-in en un hotel',
+      openingJa: 'いらっしゃいませ。ご予約のお名前をお願いします。',
+      openingSub: 'Bienvenido. ¿Me dice el nombre de su reserva, por favor?',
+    },
+    {
+      id: 'pharmacy',
+      label: lang === 'ja' ? '薬局・病院で症状を話す' : 'En la farmacia / médico',
+      openingJa: 'どうされましたか？今日はどんな症状がありますか？',
+      openingSub: '¿Qué le ocurre? ¿Qué síntomas tiene hoy?',
+    },
+    {
+      id: 'directions',
+      label: lang === 'ja' ? '道を尋ねる' : 'Pedir indicaciones en la calle',
+      openingJa: 'はい、どうしましたか？何かお探しですか？',
+      openingSub: 'Sí, ¿dígame? ¿Está buscando algún sitio?',
+    },
+    {
+      id: 'hobbies',
+      label: lang === 'ja' ? '趣味や週末の予定' : 'Hablar de aficiones y planes',
+      openingJa: '週末はいつも何をしていますか？趣味は何ですか？',
+      openingSub: '¿Qué sueles hacer los fines de semana? ¿Cuáles son tus aficiones?',
+    },
+    {
+      id: 'interview',
+      label: lang === 'ja' ? '自己紹介・ビジネス会話' : 'Presentación formal / Entrevista',
+      openingJa: 'はじめまして。簡単に自己紹介をお願いします。',
+      openingSub: 'Encantado. Por favor, preséntese brevemente.',
+    },
+  ];
+  const scenarios = [...p.scenarios, ...EXTRA_SCENARIOS];
+
 
   const [mode, setMode] = useState<PracticeMode>(initialMode);
 
@@ -262,7 +313,7 @@ export function PracticeView({
   // 1. ORAL TUTOR STATE
   const [scenario, setScenario] = useState(scenarios[0].id);
   const [oralLevel, setOralLevel] = useState<JlptLevel>(user?.jlptLevel || 'N5');
-  const [voiceName, setVoiceName] = useState<'Kore' | 'Puck' | 'Zephyr'>('Kore');
+  const [voiceName, setVoiceName] = useState<'Kore' | 'Puck' | 'Zephyr'>('Puck');
   const [pace, setPace] = useState<'slow' | 'natural'>('slow');
   const [oralInput, setOralInput] = useState('');
   const [oralLoading, setOralLoading] = useState(false);
