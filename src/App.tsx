@@ -241,14 +241,13 @@ export default function App() {
           </div>
         </footer>
 
-        <AuthModal
-          open={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          onAuthenticated={(authUser) => {
-            setUser(authUser);
-            setAuthModalOpen(false);
-          }}
-        />
+             <AuthModal
+       open={authModalOpen}
+       onClose={() => setAuthModalOpen(false)}
+       user={user}
+       onAuthChange={(authUser) => setUser(authUser)}
+     />
+
       </div>
     </ErrorBoundary>
   );
