@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 
 export interface WordPair {
   ja: string;
+  romaji?: string;
   es: string;
 }
 
@@ -39,6 +40,32 @@ const PAIR_COLORS = [
   },
 ];
 
+const KANA_MAP: Record<string, string> = {
+  あ:'a',い:'i',う:'u',え:'e',お:'o',か:'ka',き:'ki',く:'ku',け:'ke',こ:'ko',
+  さ:'sa',し:'shi',す:'su',せ:'se',そ:'so',た:'ta',ち:'chi',つ:'tsu',て:'te',と:'to',
+  な:'na',に:'ni',ぬ:'nu',ね:'ne',の:'no',は:'ha',ひ:'hi',ふ:'fu',へ:'he',ほ:'ho',
+  ま:'ma',み:'mi',む:'mu',め:'me',も:'mo',や:'ya',ゆ:'yu',よ:'yo',
+  ら:'ra',り:'ri',る:'ru',れ:'re',ろ:'ro',わ:'wa',を:'o',ん:'n',
+  が:'ga',ぎ:'gi',ぐ:'gu',げ:'ge',ご:'go',ざ:'za',じ:'ji',ず:'zu',ぜ:'ze',ぞ:'zo',
+  だ:'da',ぢ:'ji',づ:'zu',で:'de',ど:'do',ば:'ba',び:'bi',ぶ:'bu',べ:'be',ぼ:'bo',
+  ぱ:'pa',ぴ:'pi',ぷ:'pu',ぺ:'pe',ぽ:'po',
+  ア:'a',イ:'i',ウ:'u',エ:'e',オ:'o',カ:'ka',キ:'ki',ク:'ku',ケ:'ke',コ:'ko',
+  サ:'sa',シ:'shi',ス:'su',セ:'se',ソ:'so',タ:'ta',チ:'chi',ツ:'tsu',テ:'te',ト:'to',
+  ナ:'na',ニ:'ni',ヌ:'nu',ネ:'ne',ノ:'no',ハ:'ha',ヒ:'hi',フ:'fu',ヘ:'he',ホ:'ho',
+  マ:'ma',ミ:'mi',ム:'mu',メ:'me',モ:'mo',ヤ:'ya',ユ:'yu',ヨ:'yo',
+  ラ:'ra',リ:'ri',ル:'ru',レ:'re',ロ:'ro',ワ:'wa',ヲ:'o',ン:'n',
+  ガ:'ga',ギ:'gi',グ:'gu',ゲ:'ge',ゴ:'go',ザ:'za',ジ:'ji',ズ:'zu',ゼ:'ze',ゾ:'zo',
+  ダ:'da',ヂ:'ji',ヅ:'zu',デ:'de',ド:'do',バ:'ba',ビ:'bi',ブ:'bu',ベ:'be',ボ:'bo',
+  パ:'pa',ピ:'pi',プ:'pu',ペ:'pe',ポ:'po',ー:'-',
+};
+function quickKanaReading(text: string): string {
+  let out = '';
+  for (const ch of text) {
+    if (KANA_MAP[ch]) out += KANA_MAP[ch];
+  }
+  return out;
+}
+
 function segmentJapaneseWords(ja: string): string[] {
   try {
     if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
@@ -71,7 +98,7 @@ function buildInitialPairs(ja: string, es: string): WordPair[] {
   const esWords = es.trim().split(/\s+/).filter(Boolean);
 
   if (esWords.length === 0) {
-    return jaWords.map((w) => ({ ja: w, es: '' }));
+    return jaWords.map((w) => ({ ja: w, romaji: quickKanaReading(w), es: '' }));
   }
 
   let prevEnd = 0;
@@ -85,11 +112,11 @@ function buildInitialPairs(ja: string, es: string): WordPair[] {
     prevEnd = end;
     return {
       ja: jaWord,
+      romaji: quickKanaReading(jaWord),
       es: esWords.slice(start, end).join(' '),
     };
   });
 }
-
 interface KaraokePhraseProps {
   ja: string;
   es?: string;
@@ -114,7 +141,12 @@ export function KaraokePhrase({ ja, es = '', isPlaying, progress = 0 }: KaraokeP
         if (!cancelled && Array.isArray(aligned) && aligned.length > 0) {
           const joinedEs = aligned.map((p) => p.es || '').join(' ').trim();
           if (joinedEs.length >= es.trim().length * 0.85) {
-            setPairs(aligned);
+            setPairs(
+              aligned.map((item) => ({
+                ...item,
+                romaji: item.romaji || quickKanaReading(item.ja),
+              }))
+            );
           }
         }
       })
@@ -146,7 +178,6 @@ export function KaraokePhrase({ ja, es = '', isPlaying, progress = 0 }: KaraokeP
 
   return (
     <div className="space-y-2.5">
-      {/* Frase en Japonés con cada palabra coloreada */}
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1.5 font-jp text-lg sm:text-xl leading-relaxed">
         {pairs.map((pair, idx) => {
           const palette = PAIR_COLORS[idx % PAIR_COLORS.length];
@@ -156,17 +187,21 @@ export function KaraokePhrase({ ja, es = '', isPlaying, progress = 0 }: KaraokeP
               key={idx}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
-              className={`px-1.5 py-0.5 rounded-md transition-all duration-150 cursor-pointer ${palette.text} ${palette.underline} ${
+              className={`inline-flex flex-col items-center px-2 py-1 rounded-md transition-all duration-150 cursor-pointer ${palette.text} ${palette.underline} ${
                 isLit ? `${palette.activeBg} font-bold scale-105` : 'font-medium'
               }`}
             >
-              {pair.ja}
+              <span>{pair.ja}</span>
+              {pair.romaji && (
+                <span className="text-[11px] font-mono opacity-80 leading-tight mt-0.5">
+                  {pair.romaji}
+                </span>
+              )}
             </span>
           );
         })}
       </div>
 
-      {/* Traducción en Español con los MISMOS colores emparejados */}
       {es && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
           {pairs.map((pair, idx) => {
