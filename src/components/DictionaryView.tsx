@@ -1,6 +1,7 @@
 import { Plus, Search, Volume2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatT } from '../i18n/translations';
+import { DICCIONARIOS_LIBROS } from '../data/diccionariosLibros';
 import { useLanguage } from '../i18n/LanguageContext';
 import { api, playBase64Audio } from '../lib/api';
 import { createUserSrsCard, fetchDictionaryEntries } from '../lib/firestoreService';
