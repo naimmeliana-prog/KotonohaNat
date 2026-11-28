@@ -320,6 +320,7 @@ export function PracticeView({
   const [oralLoading, setOralLoading] = useState(false);
   const [oralError, setOralError] = useState<string | null>(null);
   const [playingTurnId, setPlayingTurnId] = useState<string | null>(null);
+  const [playProgress, setPlayProgress] = useState<number>(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -344,18 +345,20 @@ export function PracticeView({
   cachedMime?: string | null,
   turnId?: string
 ) => {
+  setPlayProgress(0);
   if (turnId) setPlayingTurnId(turnId);
   try {
-    if (cachedB64) {
-      await playBase64Audio(cachedB64, cachedMime || 'audio/wav');
+    if (cachedB64 && cachedB64 !== 'BROWSER_TTS') {
+      await playBase64Audio(cachedB64, cachedMime || 'audio/wav', (r) => setPlayProgress(r));
       return;
     }
     const tts = await api.synthesizeSpeech(ja, voiceName, pace);
-    await playBase64Audio(tts.audioBase64, tts.mimeType);
+    await playBase64Audio(tts.audioBase64, tts.mimeType, (r) => setPlayProgress(r));
   } catch (err) {
     setOralError(err instanceof Error ? err.message : p.audioPlayError);
   } finally {
     setPlayingTurnId(null);
+    setPlayProgress(0);
   }
 };
 
@@ -763,10 +766,12 @@ export function PracticeView({
                    <div className="space-y-2 flex-1">
                      <p className="text-xs font-medium text-[#C9372C] dark:text-[#E04F44]">Sensei</p>
                      <KaraokePhrase
-                       ja={turn.ja}
-                       es={turn.es}
-                       isPlaying={playingTurnId === turn.id}
-                     />
+  ja={turn.ja}
+  es={turn.es}
+  isPlaying={playingTurnId === turn.id}
+  progress={playingTurnId === turn.id ? playProgress : 0}
+/>
+
                      {turn.reading && (
                        <p className="font-jp text-xs text-[#5A606B] dark:text-[#9BA1AE]">
                          {turn.reading} {turn.romaji ? `· ${turn.romaji}` : ''}
