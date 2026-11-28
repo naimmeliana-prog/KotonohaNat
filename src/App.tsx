@@ -160,7 +160,12 @@ export default function App() {
                 <HiraganaView onGoToWritingPractice={() => handleNavigate('practica', 'escritura')} />
               )}
 
+              {activeSection === 'kanji' && <KanjiSection />}
+
+              {activeSection === 'cotidiano' && <CotidianoSection />}
+
               {activeSection === 'cursos' && (
+
                 <CoursesView
                   user={user}
                   completedLessonIds={stats?.completedLessonIds || []}
