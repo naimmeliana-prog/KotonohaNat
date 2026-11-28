@@ -152,6 +152,45 @@ let lastSpokenText = '';
 let lastPace: 'slow' | 'natural' = 'natural';
 let lastVoice: VoiceProfile = 'Puck';
 
+const audioCache = new Map<string, { audioBase64: string; mimeType: string }>();
+
+export const api = {
+  synthesizeSpeech: async (
+    text: string,
+    _voiceName: VoiceProfile = 'Puck',
+    pace: 'slow' | 'natural' = 'natural'
+  ) => {
+    const voiceName: VoiceProfile = 'Puck';
+    lastSpokenText = text;
+    lastPace = pace;
+    lastVoice = voiceName;
+
+    const cacheKey = `${voiceName}:${pace}:${text}`;
+    const cached = audioCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, pace, voiceName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.audioBase64) {
+          const result = { audioBase64: data.audioBase64, mimeType: data.mimeType || 'audio/wav' };
+          audioCache.set(cacheKey, result);
+          return result;
+        }
+      }
+    } catch {
+      // Fallback al navegador
+    }
+    return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
+  },
+
 export const api = {
   synthesizeSpeech: async (
     text: string,
@@ -400,10 +439,28 @@ export const api = {
 
 let currentAudio: HTMLAudioElement | null = null;
 
-export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise<void> {
+export function playBase64Audio(
+  base64: string,
+  mimeType = 'audio/wav',
+  onProgress?: (ratio: number) => void
+): Promise<void> {
   if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
+    if (onProgress) {
+      const estMs = Math.max(1200, lastSpokenText.length * (lastPace === 'slow' ? 280 : 190));
+      let elapsed = 0;
+      const t = window.setInterval(() => {
+        elapsed += 50;
+        onProgress(Math.min(0.99, elapsed / estMs));
+        if (elapsed >= estMs) window.clearInterval(t);
+      }, 50);
+      return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).finally(() => {
+        window.clearInterval(t);
+        onProgress(1);
+      });
+    }
     return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
   }
+
   return new Promise((resolve, reject) => {
     try {
       if (currentAudio) {
@@ -412,12 +469,32 @@ export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise
       }
       const audio = new Audio('data:' + mimeType + ';base64,' + base64);
       currentAudio = audio;
-      audio.playbackRate = lastPace === 'slow' ? 0.82 : lastVoice === 'Zephyr' ? 1.05 : 1.0;
-      audio.onended = () => resolve();
+      audio.playbackRate = lastPace === 'slow' ? 0.85 : 1.0;
+
+      let rafId = 0;
+      const trackTime = () => {
+        if (onProgress && audio.duration > 0 && !Number.isNaN(audio.duration)) {
+          onProgress(Math.min(1, audio.currentTime / audio.duration));
+        }
+        if (!audio.paused && !audio.ended) {
+          rafId = window.requestAnimationFrame(trackTime);
+        }
+      };
+
+      audio.onplay = () => {
+        if (onProgress) rafId = window.requestAnimationFrame(trackTime);
+      };
+      audio.onended = () => {
+        if (rafId) window.cancelAnimationFrame(rafId);
+        if (onProgress) onProgress(1);
+        resolve();
+      };
       audio.onerror = () => {
+        if (rafId) window.cancelAnimationFrame(rafId);
         speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
       };
       audio.play().catch(() => {
+        if (rafId) window.cancelAnimationFrame(rafId);
         speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
       });
     } catch (e) {
@@ -425,3 +502,4 @@ export function playBase64Audio(base64: string, mimeType = 'audio/wav'): Promise
     }
   });
 }
+
