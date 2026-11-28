@@ -1352,6 +1352,8 @@ export function PracticeView({
           </aside>
         </div>
       )}
+      {mode === 'libros' && <PracticasSection />}
+
     </div>
   );
 }
