@@ -667,3 +667,5 @@ export const expresionesSuplementoData: ExpresionSuplemento[] = [
   }
 
 ];
+export const expresionesData = expresionesSuplementoData;
+
