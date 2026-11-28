@@ -445,20 +445,7 @@ export function playBase64Audio(
   onProgress?: (ratio: number) => void
 ): Promise<void> {
   if (base64 === 'BROWSER_TTS' || mimeType === 'audio/browser-tts') {
-    if (onProgress) {
-      const estMs = Math.max(1200, lastSpokenText.length * (lastPace === 'slow' ? 280 : 190));
-      let elapsed = 0;
-      const t = window.setInterval(() => {
-        elapsed += 50;
-        onProgress(Math.min(0.99, elapsed / estMs));
-        if (elapsed >= estMs) window.clearInterval(t);
-      }, 50);
-      return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).finally(() => {
-        window.clearInterval(t);
-        onProgress(1);
-      });
-    }
-    return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice);
+    return speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice, onProgress);
   }
 
   return new Promise((resolve, reject) => {
@@ -474,14 +461,14 @@ export function playBase64Audio(
       let rafId = 0;
       const trackTime = () => {
         if (onProgress && audio.duration > 0 && !Number.isNaN(audio.duration)) {
-          onProgress(Math.min(1, audio.currentTime / audio.duration));
+          onProgress(Math.min(0.99, audio.currentTime / audio.duration));
         }
         if (!audio.paused && !audio.ended) {
           rafId = window.requestAnimationFrame(trackTime);
         }
       };
 
-      audio.onplay = () => {
+      audio.onplaying = () => {
         if (onProgress) rafId = window.requestAnimationFrame(trackTime);
       };
       audio.onended = () => {
@@ -491,11 +478,11 @@ export function playBase64Audio(
       };
       audio.onerror = () => {
         if (rafId) window.cancelAnimationFrame(rafId);
-        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice, onProgress).then(resolve).catch(reject);
       };
       audio.play().catch(() => {
         if (rafId) window.cancelAnimationFrame(rafId);
-        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice).then(resolve).catch(reject);
+        speakJapaneseBrowser(lastSpokenText, lastPace, lastVoice, onProgress).then(resolve).catch(reject);
       });
     } catch (e) {
       reject(e);
