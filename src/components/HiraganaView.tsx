@@ -271,10 +271,9 @@ export function HiraganaView({ onGoToWritingPractice }: HiraganaViewProps) {
         <div className="inline-flex p-1 rounded-xl bg-[#ECE8DF] dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] self-start sm:self-auto">
           <button
             type="button"
-                      <button
-            type="button"
             onClick={() => handleSwitchScript('hiragana')}
             className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+
               scriptType === 'hiragana'
                 ? 'bg-white dark:bg-[#272D38] text-[#C9372C] dark:text-[#E04F44] shadow-xs'
                 : 'text-[#5A606B] dark:text-[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
