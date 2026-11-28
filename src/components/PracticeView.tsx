@@ -707,12 +707,13 @@ export function PracticeView({
           </h1>
         </div>
 
-        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-[#ECE8DF] dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#262C36] self-start">
+                <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-[#ECE8DF] dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#262C36] self-start">
           {(
             [
               { id: 'oral', label: p.tabOral },
               { id: 'srs', label: p.tabSrs },
               { id: 'escritura', label: p.tabWriting },
+              { id: 'libros', label: lang === 'ja' ? '例文・表現' : 'Frases de Libros' },
             ] as { id: PracticeMode; label: string }[]
           ).map((m) => (
             <button
@@ -729,7 +730,6 @@ export function PracticeView({
             </button>
           ))}
         </div>
-      </div>
 
       {mode === 'oral' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
