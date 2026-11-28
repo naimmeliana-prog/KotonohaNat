@@ -74,16 +74,22 @@ function buildInitialPairs(ja: string, es: string): WordPair[] {
     return jaWords.map((w) => ({ ja: w, es: '' }));
   }
 
+  let prevEnd = 0;
   return jaWords.map((jaWord, idx) => {
-    const start = Math.floor((idx * esWords.length) / jaWords.length);
-    const end = Math.floor(((idx + 1) * esWords.length) / jaWords.length);
-    const slice = esWords.slice(start, Math.max(start + 1, end)).join(' ');
+    const targetEnd =
+      idx === jaWords.length - 1
+        ? esWords.length
+        : Math.round(((idx + 1) * esWords.length) / jaWords.length);
+    const start = prevEnd;
+    const end = Math.max(start, Math.min(esWords.length, targetEnd));
+    prevEnd = end;
     return {
       ja: jaWord,
-      es: idx < esWords.length ? slice : '',
+      es: esWords.slice(start, end).join(' '),
     };
   });
 }
+
 interface KaraokePhraseProps {
   ja: string;
   es?: string;
@@ -105,8 +111,11 @@ export function KaraokePhrase({ ja, es = '', isPlaying, durationMs }: KaraokePhr
     api
       .alignWords(ja, es)
       .then((aligned) => {
-        if (!cancelled && Array.isArray(aligned) && aligned.length > 0 && aligned.some((p) => p.es)) {
-          setPairs(aligned);
+        if (!cancelled && Array.isArray(aligned) && aligned.length > 0) {
+          const joinedEs = aligned.map((p) => p.es || '').join(' ').trim();
+          if (joinedEs.length >= es.trim().length * 0.85) {
+            setPairs(aligned);
+          }
         }
       })
       .catch(() => {});
