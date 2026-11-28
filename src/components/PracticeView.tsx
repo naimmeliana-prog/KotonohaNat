@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
 import { buildGuestSrsCards } from '../data/seedCatalog';
+import { PracticasSection } from './PracticasSection';
 import { formatT } from '../i18n/translations';
 import { useLanguage } from '../i18n/LanguageContext';
 import { KaraokePhrase } from './KaraokePhrase';
