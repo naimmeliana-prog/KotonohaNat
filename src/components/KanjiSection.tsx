@@ -1,36 +1,19 @@
 import React, { useState } from 'react';
 import { Search, X, BookOpen } from 'lucide-react';
-import kanjiData from '../data/kanji.json';
-
-interface EjemploKanji {
-  palabra: string;
-  lectura: string;
-  significado: string;
-}
-
-interface KanjiItem {
-  id: number;
-  caracter: string;
-  trazos: number;
-  significado: string;
-  onyomi: string[];
-  kunyomi: string[];
-  nivel: string;
-  ejemplos: EjemploKanji[];
-}
+import { kanjiData, KanjiItem } from '../data/kanji';
 
 export default function KanjiSection() {
   const [selectedKanji, setSelectedKanji] = useState<KanjiItem | null>(null);
   const [search, setSearch] = useState<string>('');
 
-  const filteredKanji = (kanjiData as KanjiItem[]).filter(
+  const filteredKanji = kanjiData.filter(
     (k) =>
       k.caracter.includes(search) ||
       k.significado.toLowerCase().includes(search.toLowerCase()) ||
       k.onyomi.some((o) => o.includes(search)) ||
       k.kunyomi.some((ku) => ku.includes(search))
   );
-
+  
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Cabecera y Buscador */}
