@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, X, BookOpen } from 'lucide-react';
 import { kanjiData, KanjiItem } from '../data/kanji';
 
-export default function KanjiSection() {
+export function KanjiSection() {
   const [selectedKanji, setSelectedKanji] = useState<KanjiItem | null>(null);
   const [search, setSearch] = useState<string>('');
 
