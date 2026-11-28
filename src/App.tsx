@@ -12,6 +12,8 @@ import { AuthModal } from './components/AuthModal';
 import { CommunityView } from './components/CommunityView';
 import { CoursesView } from './components/CoursesView';
 import { DashboardView } from './components/DashboardView';
+import { KanjiSection } from './components/KanjiSection';
+import { CotidianoSection } from './components/CotidianoSection';
 import { DictionaryView } from './components/DictionaryView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { HiraganaView } from './components/HiraganaView';
