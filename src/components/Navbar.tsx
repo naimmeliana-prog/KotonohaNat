@@ -6,6 +6,8 @@ import type { AuthUser } from '../types/kotonoha';
 export type NavSection =
   | 'inicio'
   | 'hiragana'
+  | 'kanji'
+  | 'cotidiano'
   | 'cursos'
   | 'practica'
   | 'diccionario'
@@ -26,7 +28,9 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
 
   const navItems: { id: NavSection; label: string }[] = [
     { id: 'inicio', label: t.navbar.inicio },
-    { id: 'hiragana', label: lang === 'ja' ? 'ひらがな' : 'Hiragana' },
+    { id: 'hiragana', label: lang === 'ja' ? 'かな' : 'Kana' },
+    { id: 'kanji', label: lang === 'ja' ? '漢字' : 'Kanji' },
+    { id: 'cotidiano', label: lang === 'ja' ? '日常' : 'Cotidiano' },
     { id: 'cursos', label: t.navbar.cursos },
     { id: 'practica', label: t.navbar.practica },
     { id: 'diccionario', label: t.navbar.diccionario },
@@ -50,7 +54,7 @@ export function Navbar({ activeSection, onNavigate, user, onOpenAuth }: NavbarPr
           Kotonoha
         </button>
 
-        <nav aria-label={t.navbar.ariaNav} className="hidden lg:flex items-center gap-6">
+        <nav aria-label={t.navbar.ariaNav} className="hidden lg:flex items-center gap-5">
           {navItems.map((item) => {
             const active = activeSection === item.id;
             return (
