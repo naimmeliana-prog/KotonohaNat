@@ -5,11 +5,11 @@ import { frasesParticulasData, expresionesData } from '../data/practicas';
 export function PracticasSection() {
   const [tab, setTab] = useState<'particulas' | 'expresiones'>('particulas');
   const [modoOculto, setModoOculto] = useState<boolean>(false);
-  const [revelados, setRevelados] = useState<Record<number, boolean>>({});
+  const [revelados, setRevelados] = useState<Record<string, boolean>>({});
   const [filtroParticula, setFiltroParticula] = useState<string>('todas');
 
-  const toggleRevelar = (id: number) => {
-    setRevelados((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleRevelar = (key: string) => {
+    setRevelados((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const particulasUnicas = [
@@ -100,21 +100,28 @@ export function PracticasSection() {
           </div>
 
           <div className="space-y-4">
-            {frasesFiltradas.map((frase) => {
-              const mostrarTraduccion = !modoOculto || revelados[frase.id];
+            {frasesFiltradas.map((frase: any, idx: number) => {
+              const cardKey = `part-${frase.id ?? idx}`;
+              const mostrarTraduccion = !modoOculto || revelados[cardKey];
+              const textoExplicacion = frase.explicacion || frase.contexto;
+              const textoLectura = frase.lectura
+                ? `${frase.lectura} (${frase.romaji})`
+                : frase.romaji;
 
               return (
                 <div
-                  key={frase.id}
+                  key={cardKey}
                   className="bg-white dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] rounded-2xl p-5"
                 >
                   <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                     <span className="px-3 py-1 bg-[#C9372C]/10 text-[#C9372C] dark:text-[#E04F44] font-bold rounded-lg text-xs">
                       Partícula: {frase.particula}
                     </span>
-                    <span className="text-xs text-[#5A606B] dark:text-[#9BA1AE] font-medium">
-                      {frase.funcion}
-                    </span>
+                    {frase.funcion && (
+                      <span className="text-xs text-[#5A606B] dark:text-[#9BA1AE] font-medium">
+                        {frase.funcion}
+                      </span>
+                    )}
                   </div>
 
                   <p className="text-2xl font-serif text-[#1A1D21] dark:text-[#F2EFE9] mb-2">
@@ -123,21 +130,25 @@ export function PracticasSection() {
 
                   {mostrarTraduccion ? (
                     <div className="space-y-2 mt-3 pt-3 border-t border-[#DFD9CD] dark:border-[#252A34]">
-                      <p className="text-sm text-[#C9372C] dark:text-[#E04F44] font-medium">
-                        {frase.lectura} ({frase.romaji})
-                      </p>
+                      {textoLectura && (
+                        <p className="text-sm text-[#C9372C] dark:text-[#E04F44] font-medium">
+                          {textoLectura}
+                        </p>
+                      )}
                       <p className="text-base font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">
                         {frase.espanol}
                       </p>
-                      <div className="bg-[#F7F5F0] dark:bg-[#111317] text-[#4A505A] dark:text-[#B3B8C4] text-xs p-3 rounded-xl flex gap-2 items-start mt-2">
-                        <Info className="w-4 h-4 text-[#C9372C] dark:text-[#E04F44] shrink-0 mt-0.5" />
-                        <p>{frase.explicacion}</p>
-                      </div>
+                      {textoExplicacion && (
+                        <div className="bg-[#F7F5F0] dark:bg-[#111317] text-[#4A505A] dark:text-[#B3B8C4] text-xs p-3 rounded-xl flex gap-2 items-start mt-2">
+                          <Info className="w-4 h-4 text-[#C9372C] dark:text-[#E04F44] shrink-0 mt-0.5" />
+                          <p>{textoExplicacion}</p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => toggleRevelar(frase.id)}
+                      onClick={() => toggleRevelar(cardKey)}
                       className="mt-2 text-xs font-semibold text-[#C9372C] dark:text-[#E04F44] bg-[#C9372C]/10 px-3 py-1.5 rounded-lg cursor-pointer"
                     >
                       Mostrar lectura y traducción
@@ -149,22 +160,28 @@ export function PracticasSection() {
           </div>
         </div>
       )}
-
       {/* PESTAÑA 2: EXPRESIONES */}
       {tab === 'expresiones' && (
         <div className="space-y-4">
-          {expresionesData.map((exp) => {
-            const mostrar = !modoOculto || revelados[exp.id + 1000];
+          {expresionesData.map((exp: any, idx: number) => {
+            const cardKey = `exp-${exp.id ?? idx}`;
+            const mostrar = !modoOculto || revelados[cardKey];
+            const etiquetaSituacion = exp.situacion || exp.categoria || 'Expresión';
+            const textoLectura = exp.lectura
+              ? `${exp.lectura} · ${exp.romaji}`
+              : exp.romaji;
+            const significado = exp.significadoNatural || exp.espanol;
+            const textoUso = exp.notaUso || exp.contexto;
 
             return (
               <div
-                key={exp.id}
+                key={cardKey}
                 className="bg-white dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] rounded-2xl p-5"
               >
                 <div className="flex justify-between items-center mb-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    {exp.situacion}
+                    {etiquetaSituacion}
                   </span>
                 </div>
 
@@ -174,25 +191,29 @@ export function PracticasSection() {
 
                 {mostrar ? (
                   <div className="space-y-2 mt-3 pt-3 border-t border-[#DFD9CD] dark:border-[#252A34]">
-                    <p className="text-sm text-[#C9372C] dark:text-[#E04F44] font-medium">
-                      {exp.lectura} · {exp.romaji}
-                    </p>
+                    {textoLectura && (
+                      <p className="text-sm text-[#C9372C] dark:text-[#E04F44] font-medium">
+                        {textoLectura}
+                      </p>
+                    )}
                     <p className="text-base font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
-                      {exp.significadoNatural}
+                      {significado}
                     </p>
                     {exp.traduccionLiteral && (
                       <p className="text-xs text-[#5A606B] dark:text-[#9BA1AE] italic">
                         Literal: "{exp.traduccionLiteral}"
                       </p>
                     )}
-                    <p className="text-xs bg-[#F7F5F0] dark:bg-[#111317] text-[#4A505A] dark:text-[#B3B8C4] p-3 rounded-xl">
-                      <strong>Uso:</strong> {exp.notaUso}
-                    </p>
+                    {textoUso && (
+                      <p className="text-xs bg-[#F7F5F0] dark:bg-[#111317] text-[#4A505A] dark:text-[#B3B8C4] p-3 rounded-xl">
+                        <strong>Uso:</strong> {textoUso}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => toggleRevelar(exp.id + 1000)}
+                    onClick={() => toggleRevelar(cardKey)}
                     className="mt-2 text-xs font-semibold text-[#C9372C] dark:text-[#E04F44] bg-[#C9372C]/10 px-3 py-1.5 rounded-lg cursor-pointer"
                   >
                     Revelar significado y uso
