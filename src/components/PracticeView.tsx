@@ -726,10 +726,11 @@ export function PracticeView({
                   : 'text-[#5A606B] dark:text-[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
               }`}
             >
-              {m.label}
+               {m.label}
             </button>
           ))}
         </div>
+      </div>
 
       {mode === 'oral' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
