@@ -31,7 +31,7 @@ import type {
   WritingEvaluation,
 } from '../types/kotonoha';
 
-export type PracticeMode = 'oral' | 'srs' | 'escritura';
+export type PracticeMode = 'oral' | 'srs' | 'escritura' | 'libros';
 
 interface PracticeViewProps {
   initialMode?: PracticeMode;
