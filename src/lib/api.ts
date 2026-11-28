@@ -131,7 +131,12 @@ async function generateSmart(
   throw new Error('No se obtuvo respuesta de la IA.');
 }
 
-function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural', voiceProfile: VoiceProfile): Promise<void> {
+function speakJapaneseBrowser(
+  text: string,
+  pace: 'slow' | 'natural',
+  voiceProfile: VoiceProfile,
+  onProgress?: (ratio: number) => void
+): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve();
@@ -142,8 +147,34 @@ function speakJapaneseBrowser(text: string, pace: 'slow' | 'natural', voiceProfi
     utterance.lang = 'ja-JP';
     utterance.rate = pace === 'slow' ? 0.78 : 1.0;
     utterance.pitch = voiceProfile === 'Puck' ? 0.8 : voiceProfile === 'Zephyr' ? 1.18 : 1.0;
-    utterance.onend = () => resolve();
-    utterance.onerror = () => resolve();
+
+    let timer: number | null = null;
+    const estMs = Math.max(1100, text.length * (pace === 'slow' ? 270 : 185));
+
+    utterance.onstart = () => {
+      if (!onProgress) return;
+      let elapsed = 0;
+      timer = window.setInterval(() => {
+        elapsed += 50;
+        onProgress(Math.min(0.98, elapsed / estMs));
+        if (elapsed >= estMs && timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      }, 50);
+    };
+
+    const cleanup = () => {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+      if (onProgress) onProgress(1);
+      resolve();
+    };
+
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
     window.speechSynthesis.speak(utterance);
   });
 }
@@ -191,36 +222,7 @@ export const api = {
     return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
   },
 
-export const api = {
-  synthesizeSpeech: async (
-    text: string,
-    _voiceName: VoiceProfile = 'Puck',
-    pace: 'slow' | 'natural' = 'natural'
-  ) => {
-    const voiceName: VoiceProfile = 'Puck';
-    lastSpokenText = text;
-    lastPace = pace;
-    lastVoice = voiceName;
-
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, pace, voiceName }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.audioBase64) {
-          return { audioBase64: data.audioBase64, mimeType: data.mimeType || 'audio/mpeg' };
-        }
-      }
-    } catch {
-      // Fallback al navegador
-    }
-    return { audioBase64: 'BROWSER_TTS', mimeType: 'audio/browser-tts' };
-  },
-
-      alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
+    alignWords: async (ja: string, es: string): Promise<{ ja: string; es: string }[]> => {
     const promptText = `Separa esta oracion japonesa palabra por palabra y empareja cada palabra japonesa con su traduccion exacta en espanol. Japones: "${ja}". Espanol: "${es}". Devuelve JSON valido: { "pairs": [{ "ja": "palabra_ja", "es": "palabra_es" }] }`;
     const raw = await generateSmart(promptText, { promptText });
     const parsed = extractJsonObject(raw);
