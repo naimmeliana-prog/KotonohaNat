@@ -9,7 +9,7 @@ import {
   ItemCotidiano
 } from '../data/cotidiano';
 
-export default function CotidianoSection() {
+export function CotidianoSection() {
   const [subTab, setSubTab] = useState<'numeros' | 'horas' | 'calendario'>('numeros');
 
   const renderGrid = (items: ItemCotidiano[]) => (
