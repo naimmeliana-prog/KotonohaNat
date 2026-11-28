@@ -280,51 +280,7 @@ export function HiraganaView({ onGoToWritingPractice }: HiraganaViewProps) {
           >
             Hiragana (ひらがな)
           </button>
-          <button
-            type="button"
-            onClick={() => handleSwitchScript('katakana')}
-            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
-              scriptType === 'katakana'
-                ? 'bg-white dark:bg-[#272D38] text-[#C9372C] dark:text-[#E04F44] shadow-xs'
-                : 'text-[#5A606B] dark:text-      {/* Tarjeta destacada del carácter seleccionado */}
-      <div className="bg-white dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-2xl bg-[#F7F5F0] dark:bg-[#111317] border border-[#DFD9CD] dark:border-[#2C323E] flex items-center justify-center">
-            <span className="text-5xl font-serif font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
-              {selectedCell.kana}
-            </span>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-bold text-[#C9372C] dark:text-[#E04F44] uppercase">
-                {selectedCell.romaji}
-              </span>
-              <button
-                type="button"
-                onClick={() => handlePlay(selectedCell)}
-                disabled={playingKana === selectedCell.kana}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-[#ECE8DF] dark:bg-[#252A34] hover:bg-[#DFD9CD] dark:hover:bg-[#2C323E] transition-colors cursor-pointer"
-              >
-                <Volume2 className="w-3.5 h-3.5" />
-                {lang === 'ja' ? '発音' : 'Escuchar'}
-              </button>
-            </div>
-
-            {selectedCell.mnemonic && (
-              <p className="text-sm text-[#1A1D21] dark:text-[#F2EFE9] flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>{selectedCell.mnemonic}</span>
-              </p>
-            )}
-
-            {selectedCell.exampleWord && (
-              <p className="text-xs text-[#5A606B] dark:text-[#9BA1AE]">
-                <strong>Ejemplo:</strong> {selectedCell.exampleWord} — {selectedCell.exampleMeaning}
-              </p>
-            )}
-          </div>
-        </div>
+          text-[#5A606B]
 
         {onGoToWritingPractice && (
           <button
@@ -427,10 +383,3 @@ export function HiraganaView({ onGoToWritingPractice }: HiraganaViewProps) {
     </div>
   );
 }
-[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
-            }`}
-          >
-            Katakana (カタカナ)
-          </button>
-        </div>
-      </div>
