@@ -775,3 +775,4 @@ export const entradasDiccionarioData: EntradaDiccionario[] = [
     fuente: 'Diccionario RUI'
   }
 ];
+export const DICCIONARIOS_LIBROS = entradasDiccionarioData;
