@@ -519,8 +519,8 @@ export const expresionesSuplementoData: ExpresionSuplemento[] = [
   { id: 'exp-9', categoria: 'Emergencias y Viajes', japones: '〜はどこですか', romaji: '〜 wa doko desu ka', espanol: '¿Dónde está 〜?', contexto: 'Para preguntar ubicaciones' },
   { id: 'exp-10', categoria: 'Emergencias y Viajes', japones: '英語かスペイン語を話せますか', romaji: 'Eigo ka Supeingo o hanasemasu ka', espanol: '¿Habla inglés o español?', contexto: 'Pedir ayuda lingüística' },
   { id: 'exp-11', categoria: 'Expresiones Cotidianas', japones: 'お疲れ様でした', romaji: 'Otsukaresama deshita', espanol: 'Buen trabajo / Gracias por tu esfuerzo', contexto: 'Al terminar el trabajo o estudio' },
-  { id: 'exp-12', categoria: 'Expresiones Cotidianas', japones: '気をつけて', romaji: 'Ki o tsukete', espanol: 'Cuídate / Ten cuidado', contexto: 'Despedida afectuosa o de viaje' }
-    // ================= SUPLEMENTO: NOCIONES BÁSICAS (CARDONA GRANDA) =================
+    { id: 'exp-12', categoria: 'Expresiones Cotidianas', japones: '気をつけて', romaji: 'Ki o tsukete', espanol: 'Cuídate / Ten cuidado', contexto: 'Despedida afectuosa o de viaje' },
+  // ================= SUPLEMENTO: NOCIONES BÁSICAS (CARDONA GRANDA) =================
   {
     id: 'nb-1',
     categoria: 'Expresiones Cotidianas',
