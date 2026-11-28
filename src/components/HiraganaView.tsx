@@ -11,7 +11,7 @@ interface KanaCell {
   exampleMeaning?: string;
 }
 
-const BASIC_ROWS: (KanaCell | null)[][] = [
+const HIRAGANA_BASIC_ROWS: (KanaCell | null)[][] = [
   [
     { kana: 'あ', romaji: 'a', mnemonic: 'Como un atún con una espada', exampleWord: 'あめ (ame)', exampleMeaning: 'lluvia' },
     { kana: 'い', romaji: 'i', mnemonic: 'Como dos líneas de un insecto', exampleWord: 'いぬ (inu)', exampleMeaning: 'perro' },
@@ -90,45 +90,15 @@ const BASIC_ROWS: (KanaCell | null)[][] = [
     null,
   ],
 ];
-const DAKUTEN_ROWS: KanaCell[][] = [
-  [
-    { kana: 'が', romaji: 'ga' },
-    { kana: 'ぎ', romaji: 'gi (gui)' },
-    { kana: 'ぐ', romaji: 'gu' },
-    { kana: 'げ', romaji: 'ge (gue)' },
-    { kana: 'ご', romaji: 'go' },
-  ],
-  [
-    { kana: 'ざ', romaji: 'za' },
-    { kana: 'じ', romaji: 'ji (yi)' },
-    { kana: 'ず', romaji: 'zu' },
-    { kana: 'ぜ', romaji: 'ze' },
-    { kana: 'ぞ', romaji: 'zo' },
-  ],
-  [
-    { kana: 'だ', romaji: 'da' },
-    { kana: 'ぢ', romaji: 'ji' },
-    { kana: 'づ', romaji: 'zu' },
-    { kana: 'で', romaji: 'de' },
-    { kana: 'ど', romaji: 'do' },
-  ],
-  [
-    { kana: 'ば', romaji: 'ba' },
-    { kana: 'び', romaji: 'bi' },
-    { kana: 'ぶ', romaji: 'bu' },
-    { kana: 'べ', romaji: 'be' },
-    { kana: 'ぼ', romaji: 'bo' },
-  ],
-  [
-    { kana: 'ぱ', romaji: 'pa' },
-    { kana: 'ぴ', romaji: 'pi' },
-    { kana: 'ぷ', romaji: 'pu' },
-    { kana: 'ぺ', romaji: 'pe' },
-    { kana: 'ぽ', romaji: 'po' },
-  ],
+const HIRAGANA_DAKUTEN_ROWS: KanaCell[][] = [
+  [{ kana: 'が', romaji: 'ga' }, { kana: 'ぎ', romaji: 'gi (gui)' }, { kana: 'ぐ', romaji: 'gu' }, { kana: 'げ', romaji: 'ge (gue)' }, { kana: 'ご', romaji: 'go' }],
+  [{ kana: 'ざ', romaji: 'za' }, { kana: 'じ', romaji: 'ji (yi)' }, { kana: 'ず', romaji: 'zu' }, { kana: 'ぜ', romaji: 'ze' }, { kana: 'ぞ', romaji: 'zo' }],
+  [{ kana: 'だ', romaji: 'da' }, { kana: 'ぢ', romaji: 'ji' }, { kana: 'づ', romaji: 'zu' }, { kana: 'で', romaji: 'de' }, { kana: 'ど', romaji: 'do' }],
+  [{ kana: 'ば', romaji: 'ba' }, { kana: 'び', romaji: 'bi' }, { kana: 'ぶ', romaji: 'bu' }, { kana: 'べ', romaji: 'be' }, { kana: 'ぼ', romaji: 'bo' }],
+  [{ kana: 'ぱ', romaji: 'pa' }, { kana: 'ぴ', romaji: 'pi' }, { kana: 'ぷ', romaji: 'pu' }, { kana: 'ぺ', romaji: 'pe' }, { kana: 'ぽ', romaji: 'po' }],
 ];
 
-const YOON_ROWS: KanaCell[][] = [
+const HIRAGANA_YOON_ROWS: KanaCell[][] = [
   [{ kana: 'きゃ', romaji: 'kya' }, { kana: 'きゅ', romaji: 'kyu' }, { kana: 'きょ', romaji: 'kyo' }],
   [{ kana: 'しゃ', romaji: 'sha' }, { kana: 'しゅ', romaji: 'shu' }, { kana: 'しょ', romaji: 'sho' }],
   [{ kana: 'ちゃ', romaji: 'cha' }, { kana: 'ちゅ', romaji: 'chu' }, { kana: 'ちょ', romaji: 'cho' }],
@@ -142,266 +112,325 @@ const YOON_ROWS: KanaCell[][] = [
   [{ kana: 'ぴゃ', romaji: 'pya' }, { kana: 'ぴゅ', romaji: 'pyu' }, { kana: 'ぴょ', romaji: 'pyo' }],
 ];
 
+const KATAKANA_BASIC_ROWS: (KanaCell | null)[][] = [
+  [
+    { kana: 'ア', romaji: 'a', mnemonic: 'Como un hacha afilada (Axe)', exampleWord: 'アイス (aisu)', exampleMeaning: 'helado' },
+    { kana: 'イ', romaji: 'i', mnemonic: 'Como un caballete inclinado', exampleWord: 'インド (indo)', exampleMeaning: 'India' },
+    { kana: 'ウ', romaji: 'u', mnemonic: 'Igual que う pero con trazos rectos', exampleWord: 'ウイルス (uirusu)', exampleMeaning: 'virus' },
+    { kana: 'エ', romaji: 'e', mnemonic: 'Como una viga en forma de I', exampleWord: 'エアコン (eakon)', exampleMeaning: 'aire acondicionado' },
+    { kana: 'オ', romaji: 'o', mnemonic: 'Como un cantante de Ópera', exampleWord: 'オレンジ (orenji)', exampleMeaning: 'naranja' },
+  ],
+  [
+    { kana: 'カ', romaji: 'ka', mnemonic: 'Igual que か pero sin el trazo derecho', exampleWord: 'カメラ (kamera)', exampleMeaning: 'cámara' },
+    { kana: 'キ', romaji: 'ki', mnemonic: 'Como el mango de una llave (Key)', exampleWord: 'キロ (kiro)', exampleMeaning: 'kilo' },
+    { kana: 'ク', romaji: 'ku', mnemonic: 'Como el pico de un cuervo', exampleWord: 'クラス (kurasu)', exampleMeaning: 'clase' },
+    { kana: 'ケ', romaji: 'ke', mnemonic: 'Como una K abierta hacia la izquierda', exampleWord: 'ケーキ (kēki)', exampleMeaning: 'pastel' },
+    { kana: 'コ', romaji: 'ko', mnemonic: 'Como dos esquinas cuadradas (Corner)', exampleWord: 'コーヒー (kōhī)', exampleMeaning: 'café' },
+  ],
+  [
+    { kana: 'サ', romaji: 'sa', mnemonic: 'Como una silla de montar', exampleWord: 'サラダ (sarada)', exampleMeaning: 'ensalada' },
+    { kana: 'シ', romaji: 'shi', mnemonic: 'Una cara sonriente mirando hacia arriba', exampleWord: 'シャツ (shatsu)', exampleMeaning: 'camisa' },
+    { kana: 'ス', romaji: 'su', mnemonic: 'Como un esquiador bajando', exampleWord: 'スポーツ (supōtsu)', exampleMeaning: 'deporte' },
+    { kana: 'セ', romaji: 'se', mnemonic: 'Igual que せ pero anguloso', exampleWord: 'セーター (sētā)', exampleMeaning: 'suéter' },
+    { kana: 'ソ', romaji: 'so', mnemonic: 'Una aguja e hilo cosiendo (Sew)', exampleWord: 'ソファー (sofā)', exampleMeaning: 'sofá' },
+  ],
+  [
+    { kana: 'タ', romaji: 'ta', mnemonic: 'Como el kanji de tarde (夕)', exampleWord: 'タクシー (takushī)', exampleMeaning: 'taxi' },
+    { kana: 'チ', romaji: 'chi', mnemonic: 'Como una animadora (Cheerleader)', exampleWord: 'チーズ (chīzu)', exampleMeaning: 'queso' },
+    { kana: 'ツ', romaji: 'tsu', mnemonic: 'Dos ojos mirando hacia abajo', exampleWord: 'ツアー (tsuā)', exampleMeaning: 'tour' },
+    { kana: 'テ', romaji: 'te', mnemonic: 'Como un poste de teléfono', exampleWord: 'テレビ (terebi)', exampleMeaning: 'televisión' },
+    { kana: 'ト', romaji: 'to', mnemonic: 'Como un tótem', exampleWord: 'トイレ (toire)', exampleMeaning: 'baño' },
+  ],
+  [
+    { kana: 'ナ', romaji: 'na', mnemonic: 'Como un cuchillo (Knife) y un tenedor', exampleWord: 'ナイフ (naifu)', exampleMeaning: 'cuchillo' },
+    { kana: 'ニ', romaji: 'ni', mnemonic: 'Dos líneas iguales al kanji de dos (二)', exampleWord: 'ニュース (nyūsu)', exampleMeaning: 'noticias' },
+    { kana: 'ヌ', romaji: 'nu', mnemonic: 'Como unos palillos sujetando fideos (Noodles)', exampleWord: 'カヌー (kanū)', exampleMeaning: 'canoa' },
+    { kana: 'ネ', romaji: 'ne', mnemonic: 'Como un nido en un árbol (Nest)', exampleWord: 'ネクタイ (nekutai)', exampleMeaning: 'corbata' },
+    { kana: 'ノ', romaji: 'no', mnemonic: 'Una barra diagonal de prohibido (No)', exampleWord: 'ノート (nōto)', exampleMeaning: 'cuaderno' },
+  ],
+  [
+    { kana: 'ハ', romaji: 'ha', mnemonic: 'Como el bigote de un señor riendo (Ha ha)', exampleWord: 'ハム (hamu)', exampleMeaning: 'jamón' },
+    { kana: 'ヒ', romaji: 'hi', mnemonic: 'Como una persona sentada de perfil', exampleWord: 'ヒーター (hītā)', exampleMeaning: 'calefactor' },
+    { kana: 'フ', romaji: 'fu', mnemonic: 'Como una bandera ondeando (Flag)', exampleWord: 'フォーク (fōku)', exampleMeaning: 'tenedor' },
+    { kana: 'ヘ', romaji: 'he', mnemonic: 'Idéntico al hiragana へ', exampleWord: 'ヘルメット (herumetto)', exampleMeaning: 'casco' },
+    { kana: 'ホ', romaji: 'ho', mnemonic: 'Como una cruz sagrada (Holy)', exampleWord: 'ホテル (hoteru)', exampleMeaning: 'hotel' },
+  ],
+  [
+    { kana: 'マ', romaji: 'ma', mnemonic: 'Como las matemáticas geométricas', exampleWord: 'マスク (masuku)', exampleMeaning: 'mascarilla' },
+    { kana: 'ミ', romaji: 'mi', mnemonic: 'Tres líneas como tres misiles', exampleWord: 'ミルク (miruku)', exampleMeaning: 'leche' },
+    { kana: 'ム', romaji: 'mu', mnemonic: 'Como el hocico de una vaca (Muuu)', exampleWord: 'ゲーム (gēmu)', exampleMeaning: 'videojuego' },
+    { kana: 'メ', romaji: 'me', mnemonic: 'Como una espada cruzada', exampleWord: 'メール (mēru)', exampleMeaning: 'correo electrónico' },
+    { kana: 'モ', romaji: 'mo', mnemonic: 'Como el hiragana も sin curva arriba', exampleWord: 'モデル (moderu)', exampleMeaning: 'modelo' },
+  ],
+  [
+    { kana: 'ヤ', romaji: 'ya', mnemonic: 'Como un yak con cuernos', exampleWord: 'タイヤ (taiya)', exampleMeaning: 'neumático' },
+    null,
+    { kana: 'ユ', romaji: 'yu', mnemonic: 'Como el periscopio de un submarino (U-boat)', exampleWord: 'ユニーク (yunīku)', exampleMeaning: 'único' },
+    null,
+    { kana: 'ヨ', romaji: 'yo', mnemonic: 'Como una E al revés', exampleWord: 'ヨーロッパ (yōroppa)', exampleMeaning: 'Europa' },
+  ],
+  [
+    { kana: 'ラ', romaji: 'ra', mnemonic: 'Como un raptor saltando', exampleWord: 'ラジオ (rajio)', exampleMeaning: 'radio' },
+    { kana: 'リ', romaji: 'ri', mnemonic: 'Como dos cañas de río', exampleWord: 'リズム (rizumu)', exampleMeaning: 'ritmo' },
+    { kana: 'ル', romaji: 'ru', mnemonic: 'Como las raíces de un árbol (Roots)', exampleWord: 'ルール (rūru)', exampleMeaning: 'regla' },
+    { kana: 'レ', romaji: 're', mnemonic: 'Como una pierna corriendo', exampleWord: 'レストラン (resutoran)', exampleMeaning: 'restaurante' },
+    { kana: 'ロ', romaji: 'ro', mnemonic: 'Como una boca cuadrada o robot', exampleWord: 'ロボット (robotto)', exampleMeaning: 'robot' },
+  ],
+  [
+    { kana: 'ワ', romaji: 'wa', mnemonic: 'Como una copa de vino (Wine)', exampleWord: 'ワイン (wain)', exampleMeaning: 'vino' },
+    null,
+    null,
+    null,
+    { kana: 'ヲ', romaji: 'wo (o)', mnemonic: 'Poco usado en katakana moderno', exampleWord: 'ヲ', exampleMeaning: 'partícula o' },
+  ],
+  [
+    { kana: 'ン', romaji: 'n', mnemonic: 'Un ojo mirando hacia arriba (como シ)', exampleWord: 'パン (pan)', exampleMeaning: 'pan' },
+    null,
+    null,
+    null,
+    null,
+  ],
+];
+const KATAKANA_DAKUTEN_ROWS: KanaCell[][] = [
+  [{ kana: 'ガ', romaji: 'ga' }, { kana: 'ギ', romaji: 'gi (gui)' }, { kana: 'グ', romaji: 'gu' }, { kana: 'ゲ', romaji: 'ge (gue)' }, { kana: 'ゴ', romaji: 'go' }],
+  [{ kana: 'ザ', romaji: 'za' }, { kana: 'ジ', romaji: 'ji (yi)' }, { kana: 'ズ', romaji: 'zu' }, { kana: 'ゼ', romaji: 'ze' }, { kana: 'ゾ', romaji: 'zo' }],
+  [{ kana: 'ダ', romaji: 'da' }, { kana: 'ヂ', romaji: 'ji' }, { kana: 'ヅ', romaji: 'zu' }, { kana: 'デ', romaji: 'de' }, { kana: 'ド', romaji: 'do' }],
+  [{ kana: 'バ', romaji: 'ba' }, { kana: 'ビ', romaji: 'bi' }, { kana: 'ブ', romaji: 'bu' }, { kana: 'ベ', romaji: 'be' }, { kana: 'ボ', romaji: 'bo' }],
+  [{ kana: 'パ', romaji: 'pa' }, { kana: 'ピ', romaji: 'pi' }, { kana: 'プ', romaji: 'pu' }, { kana: 'ペ', romaji: 'pe' }, { kana: 'ポ', romaji: 'po' }],
+];
+
+const KATAKANA_YOON_ROWS: KanaCell[][] = [
+  [{ kana: 'キャ', romaji: 'kya' }, { kana: 'キュ', romaji: 'kyu' }, { kana: 'キョ', romaji: 'kyo' }],
+  [{ kana: 'シャ', romaji: 'sha' }, { kana: 'シュ', romaji: 'shu' }, { kana: 'ショ', romaji: 'sho' }],
+  [{ kana: 'チャ', romaji: 'cha' }, { kana: 'チュ', romaji: 'chu' }, { kana: 'チョ', romaji: 'cho' }],
+  [{ kana: 'ニャ', romaji: 'nya' }, { kana: 'ニュ', romaji: 'nyu' }, { kana: 'ニョ', romaji: 'nyo' }],
+  [{ kana: 'ヒャ', romaji: 'hya' }, { kana: 'ヒュ', romaji: 'hyu' }, { kana: 'ヒョ', romaji: 'hyo' }],
+  [{ kana: 'ミャ', romaji: 'mya' }, { kana: 'ミュ', romaji: 'myu' }, { kana: 'ミョ', romaji: 'myo' }],
+  [{ kana: 'リャ', romaji: 'rya' }, { kana: 'リュ', romaji: 'ryu' }, { kana: 'リョ', romaji: 'ryo' }],
+  [{ kana: 'ギャ', romaji: 'gya' }, { kana: 'ギュ', romaji: 'gyu' }, { kana: 'ギョ', romaji: 'gyo' }],
+  [{ kana: 'ジャ', romaji: 'ja' }, { kana: 'ジュ', romaji: 'ju' }, { kana: 'ジョ', romaji: 'jo' }],
+  [{ kana: 'ビャ', romaji: 'bya' }, { kana: 'ビュ', romaji: 'byu' }, { kana: 'ビョ', romaji: 'byo' }],
+  [{ kana: 'ピャ', romaji: 'pya' }, { kana: 'ピュ', romaji: 'pyu' }, { kana: 'ピョ', romaji: 'pyo' }],
+];
+
 interface HiraganaViewProps {
   onGoToWritingPractice?: () => void;
 }
 
 export function HiraganaView({ onGoToWritingPractice }: HiraganaViewProps) {
   const { lang } = useLanguage();
-  const isJa = lang === 'ja';
-
-  const [tab, setTab] = useState<'basic' | 'dakuten' | 'yoon' | 'rules'>('basic');
-  const [selected, setSelected] = useState<KanaCell>(BASIC_ROWS.at(0)?.at(0) as KanaCell);
+  const [scriptType, setScriptType] = useState<'hiragana' | 'katakana'>('hiragana');
+  const [selectedCell, setSelectedCell] = useState<KanaCell>(HIRAGANA_BASIC_ROWS[0][0]!);
   const [playingKana, setPlayingKana] = useState<string | null>(null);
 
-  const handleSpeak = async (cell: KanaCell) => {
-    setSelected(cell);
+  const basicRows = scriptType === 'hiragana' ? HIRAGANA_BASIC_ROWS : KATAKANA_BASIC_ROWS;
+  const dakutenRows = scriptType === 'hiragana' ? HIRAGANA_DAKUTEN_ROWS : KATAKANA_DAKUTEN_ROWS;
+  const yoonRows = scriptType === 'hiragana' ? HIRAGANA_YOON_ROWS : KATAKANA_YOON_ROWS;
+
+  const handleSwitchScript = (type: 'hiragana' | 'katakana') => {
+    setScriptType(type);
+    setSelectedCell(
+      type === 'hiragana' ? HIRAGANA_BASIC_ROWS[0][0]! : KATAKANA_BASIC_ROWS[0][0]!
+    );
+  };
+
+  const handlePlay = async (cell: KanaCell) => {
+    setSelectedCell(cell);
     setPlayingKana(cell.kana);
     try {
-      const tts = await api.synthesizeSpeech(cell.kana, 'Puck', 'slow');
-      await playBase64Audio(tts.audioBase64, tts.mimeType);
+      const res = await api.synthesizeSpeech(cell.kana, 'Kore', 'slow');
+      await playBase64Audio(res.audioBase64, res.mimeType);
     } catch {
-      // Silencio si el usuario pulsa muy rápido
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(cell.kana);
+        u.lang = 'ja-JP';
+        window.speechSynthesis.speak(u);
+      }
     } finally {
       setPlayingKana(null);
     }
   };
+
   return (
-    <div className="pb-16 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#DFD9CD] dark:border-[#252A34] pb-6">
+    <div className="space-y-8 pb-12">
+      {/* Cabecera y selector Hiragana / Katakana */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DFD9CD] dark:border-[#252A34] pb-6">
         <div>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#C9372C] dark:text-[#E04F44]">
-            <BookOpen className="w-3.5 h-3.5" />
-            {isJa ? 'ひらがな基本表' : 'Silabario Fundamental · ひらがな'}
-          </span>
-          <h1 className="font-display text-3xl sm:text-4xl font-semibold text-[#1A1D21] dark:text-[#F2EFE9] mt-1">
-            {isJa ? 'ひらがな・発音テーブル' : 'Tabla Interactiva de Hiragana'}
+          <h1 className="font-display text-3xl font-bold text-[#1A1D21] dark:text-[#F2EFE9] flex items-center gap-2.5">
+            <BookOpen className="w-7 h-7 text-[#C9372C] dark:text-[#E04F44]" />
+            {lang === 'ja' ? 'かな表 (ひらがな・カタカナ)' : 'Silabarios Kana'}
           </h1>
-          <p className="text-sm text-[#5A606B] dark:text-[#9BA1AE] mt-1 max-w-2xl">
-            {isJa
-              ? '文字をクリックするとネイティブ発音と覚え方が表示されます。'
-              : 'Pulsa cualquier símbolo para escuchar su pronunciación nativa, ver su equivalencia en romaji y descubrir su truco visual para memorizarlo.'}
+          <p className="text-sm text-[#5A606B] dark:text-[#9BA1AE] mt-1">
+            {lang === 'ja'
+              ? '文字をクリックして発音と覚え方を確認しましょう'
+              : 'Pulsa cualquier carácter para escuchar su pronunciación y ver su regla mnemotécnica'}
           </p>
+        </div>
+
+        {/* Selector de pestaña Hiragana / Katakana */}
+        <div className="inline-flex p-1 rounded-xl bg-[#ECE8DF] dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => handleSwitchScript('hiragana')}
+            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+              scriptType === 'hiragana'
+                ? 'bg-white dark:bg-[#272D38] text-[#C9372C] dark:text-[#E04F44] shadow-xs'
+                : 'text-[#5A606B] dark:text-[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
+            }`}
+          >
+            Hiragana (ひらがな)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchScript('katakana')}
+            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+              scriptType === 'katakana'
+                ? 'bg-white dark:bg-[#272D38] text-[#C9372C] dark:text-[#E04F44] shadow-xs'
+                : 'text-[#5A606B] dark:text-      {/* Tarjeta destacada del carácter seleccionado */}
+      <div className="bg-white dark:bg-[#191C22] border border-[#DFD9CD] dark:border-[#2C323E] rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 rounded-2xl bg-[#F7F5F0] dark:bg-[#111317] border border-[#DFD9CD] dark:border-[#2C323E] flex items-center justify-center">
+            <span className="text-5xl font-serif font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
+              {selectedCell.kana}
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-[#C9372C] dark:text-[#E04F44] uppercase">
+                {selectedCell.romaji}
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePlay(selectedCell)}
+                disabled={playingKana === selectedCell.kana}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-[#ECE8DF] dark:bg-[#252A34] hover:bg-[#DFD9CD] dark:hover:bg-[#2C323E] transition-colors cursor-pointer"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                {lang === 'ja' ? '発音' : 'Escuchar'}
+              </button>
+            </div>
+
+            {selectedCell.mnemonic && (
+              <p className="text-sm text-[#1A1D21] dark:text-[#F2EFE9] flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>{selectedCell.mnemonic}</span>
+              </p>
+            )}
+
+            {selectedCell.exampleWord && (
+              <p className="text-xs text-[#5A606B] dark:text-[#9BA1AE]">
+                <strong>Ejemplo:</strong> {selectedCell.exampleWord} — {selectedCell.exampleMeaning}
+              </p>
+            )}
+          </div>
         </div>
 
         {onGoToWritingPractice && (
           <button
             type="button"
             onClick={onGoToWritingPractice}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C9372C] hover:bg-[#AE2D23] text-white text-sm font-medium transition-colors cursor-pointer shrink-0"
+            className="px-4 py-2.5 rounded-xl text-sm font-medium bg-[#C9372C] hover:bg-[#AE2D23] dark:bg-[#D9463B] text-white transition-colors shrink-0 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            {isJa ? '書き取り練習へ' : 'Practicar trazos en lienzo'}
+            {lang === 'ja' ? '書き取り練習へ' : 'Practicar escritura'}
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {[
-          { id: 'basic', label: isJa ? '清音 (46文字)' : '1. Sonidos Puros (46)' },
-          { id: 'dakuten', label: isJa ? '濁音・半濁音' : '2. Tenten y Maru (が・ぱ)' },
-          { id: 'yoon', label: isJa ? '拗音 (きゃ・しゃ)' : '3. Combinaciones (きゃ・しゃ)' },
-          { id: 'rules', label: isJa ? '発音と助詞のルール' : '4. Reglas y Partículas' },
-        ].map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTab(item.id as any)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-              tab === item.id
-                ? 'bg-[#1A1D21] dark:bg-[#F2EFE9] text-white dark:text-[#111317]'
-                : 'bg-[#ECE8DF] dark:bg-[#191C22] text-[#5A606B] dark:text-[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {tab !== 'rules' && selected && (
-        <div className="p-5 rounded-2xl bg-white dark:bg-[#171A21] border border-[#DFD9CD] dark:border-[#252A34] flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={() => handleSpeak(selected)}
-              className="w-20 h-20 rounded-2xl bg-[#F7F5F0] dark:bg-[#1E222B] border border-[#DFD9CD] dark:border-[#2C323E] flex flex-col items-center justify-center hover:border-[#C9372C] transition-colors cursor-pointer"
-            >
-              <span className="text-4xl font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">{selected.kana}</span>
-              <span className="text-xs font-mono text-[#C9372C] dark:text-[#E04F44] mt-0.5">{selected.romaji}</span>
-            </button>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">
-                  {selected.kana} = <span className="text-[#C9372C] dark:text-[#E04F44]">{selected.romaji}</span>
+      {/* Tabla 1: Gojūon (Básicos) */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
+          1. Sonidos Básicos (Gojūon)
+        </h2>
+        <div className="grid grid-cols-5 gap-2.5 sm:gap-3">
+          {basicRows.flat().map((cell, idx) =>
+            cell ? (
+              <button
+                key={cell.kana}
+                type="button"
+                onClick={() => handlePlay(cell)}
+                className={`p-3 sm:p-4 rounded-xl border transition-all flex flex-col items-center cursor-pointer ${
+                  selectedCell.kana === cell.kana
+                    ? 'bg-[#C9372C]/10 border-[#C9372C] dark:border-[#E04F44]'
+                    : 'bg-white dark:bg-[#191C22] border-[#DFD9CD] dark:border-[#2C323E] hover:border-[#C9372C]/50'
+                }`}
+              >
+                <span className="text-2xl sm:text-3xl font-serif text-[#1A1D21] dark:text-[#F2EFE9]">
+                  {cell.kana}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleSpeak(selected)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#ECE8DF] dark:bg-[#232833] text-xs font-medium text-[#1A1D21] dark:text-[#F2EFE9] hover:bg-[#DFD9CD] cursor-pointer"
-                >
-                  <Volume2 className="w-3.5 h-3.5 text-[#C9372C]" />
-                  {playingKana === selected.kana ? '...' : isJa ? '再生' : 'Escuchar'}
-                </button>
-              </div>
-              {selected.mnemonic && (
-                <p className="text-sm text-[#5A606B] dark:text-[#9BA1AE]">
-                  <strong className="text-[#1A1D21] dark:text-[#F2EFE9]">Truco visual:</strong> {selected.mnemonic}
-                </p>
-              )}
-              {selected.exampleWord && (
-                <p className="text-xs text-[#5A606B] dark:text-[#9BA1AE]">
-                  <strong>Ejemplo:</strong> {selected.exampleWord} — {selected.exampleMeaning}
-                </p>
-              )}
-            </div>
-          </div>
+                <span className="text-xs font-medium text-[#5A606B] dark:text-[#9BA1AE] mt-1">
+                  {cell.romaji}
+                </span>
+              </button>
+            ) : (
+              <div key={`empty-${idx}`} className="p-3 sm:p-4 rounded-xl bg-transparent" />
+            )
+          )}
         </div>
-      )}
+      </section>
 
-      {tab === 'basic' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-5 gap-2 sm:gap-3 text-center text-xs font-semibold text-[#5A606B] dark:text-[#9BA1AE] px-1">
-            <span>A</span>
-            <span>I</span>
-            <span>U</span>
-            <span>E</span>
-            <span>O</span>
-          </div>
-          <div className="space-y-2 sm:space-y-3">
-            {BASIC_ROWS.map((row, rIdx) => (
-              <div key={rIdx} className="grid grid-cols-5 gap-2 sm:gap-3">
-                {row.map((cell, cIdx) =>
-                  cell ? (
-                    <button
-                      key={cell.kana}
-                      type="button"
-                      onClick={() => handleSpeak(cell)}
-                      className={`p-3 sm:p-4 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                        selected.kana === cell.kana
-                          ? 'bg-[#C9372C]/10 border-[#C9372C] dark:border-[#E04F44]'
-                          : 'bg-white dark:bg-[#171A21] border-[#DFD9CD] dark:border-[#252A34] hover:border-[#C9372C]/60'
-                      }`}
-                    >
-                      <span className="text-2xl sm:text-3xl font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">
-                        {cell.kana}
-                      </span>
-                      <span className="text-xs font-mono text-[#5A606B] dark:text-[#9BA1AE] mt-1">
-                        {cell.romaji}
-                      </span>
-                    </button>
-                  ) : (
-                    <div
-                      key={cIdx}
-                      className="p-3 sm:p-4 rounded-xl border border-dashed border-[#DFD9CD]/50 dark:border-[#252A34]/50"
-                    />
-                  )
-                )}
-              </div>
-            ))}
-          </div>
+      {/* Tabla 2: Dakuten y Handakuten (Impuros) */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
+          2. Sonidos Impuros (Dakuten y Handakuten)
+        </h2>
+        <div className="grid grid-cols-5 gap-2.5 sm:gap-3">
+          {dakutenRows.flat().map((cell) => (
+            <button
+              key={cell.kana}
+              type="button"
+              onClick={() => handlePlay(cell)}
+              className={`p-3 sm:p-4 rounded-xl border transition-all flex flex-col items-center cursor-pointer ${
+                selectedCell.kana === cell.kana
+                  ? 'bg-[#C9372C]/10 border-[#C9372C] dark:border-[#E04F44]'
+                  : 'bg-white dark:bg-[#191C22] border-[#DFD9CD] dark:border-[#2C323E] hover:border-[#C9372C]/50'
+              }`}
+            >
+              <span className="text-2xl sm:text-3xl font-serif text-[#1A1D21] dark:text-[#F2EFE9]">
+                {cell.kana}
+              </span>
+              <span className="text-xs font-medium text-[#5A606B] dark:text-[#9BA1AE] mt-1">
+                {cell.romaji}
+              </span>
+            </button>
+          ))}
         </div>
-      )}
+      </section>
 
-      {tab === 'dakuten' && (
-        <div className="space-y-4">
-          <p className="text-sm text-[#5A606B] dark:text-[#9BA1AE]">
-            En japonés, las dos comillas (<strong>゛ ten-ten</strong>) y el círculo (<strong>゜ maru</strong>) suavizan o transforman el sonido de las filas K, S, T y H. Recuerda: <strong>gi</strong> y <strong>ge</strong> suenan como <em>gui</em> y <em>gue</em> en español.
-          </p>
-          <div className="space-y-2 sm:space-y-3">
-            {DAKUTEN_ROWS.map((row, rIdx) => (
-              <div key={rIdx} className="grid grid-cols-5 gap-2 sm:gap-3">
-                {row.map((cell) => (
-                  <button
-                    key={cell.kana}
-                    type="button"
-                    onClick={() => handleSpeak(cell)}
-                    className={`p-3 sm:p-4 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                      selected.kana === cell.kana
-                        ? 'bg-[#C9372C]/10 border-[#C9372C]'
-                        : 'bg-white dark:bg-[#171A21] border-[#DFD9CD] dark:border-[#252A34] hover:border-[#C9372C]/60'
-                    }`}
-                  >
-                    <span className="text-2xl sm:text-3xl font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">
-                      {cell.kana}
-                    </span>
-                    <span className="text-xs font-mono text-[#5A606B] dark:text-[#9BA1AE] mt-1">{cell.romaji}</span>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
+      {/* Tabla 3: Yōon (Combinaciones) */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-[#1A1D21] dark:text-[#F2EFE9]">
+          3. Combinaciones (Yōon)
+        </h2>
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {yoonRows.flat().map((cell) => (
+            <button
+              key={cell.kana}
+              type="button"
+              onClick={() => handlePlay(cell)}
+              className={`p-3 sm:p-4 rounded-xl border transition-all flex flex-col items-center cursor-pointer ${
+                selectedCell.kana === cell.kana
+                  ? 'bg-[#C9372C]/10 border-[#C9372C] dark:border-[#E04F44]'
+                  : 'bg-white dark:bg-[#191C22] border-[#DFD9CD] dark:border-[#2C323E] hover:border-[#C9372C]/50'
+              }`}
+            >
+              <span className="text-xl sm:text-2xl font-serif text-[#1A1D21] dark:text-[#F2EFE9]">
+                {cell.kana}
+              </span>
+              <span className="text-xs font-medium text-[#5A606B] dark:text-[#9BA1AE] mt-1">
+                {cell.romaji}
+              </span>
+            </button>
+          ))}
         </div>
-      )}
-
-      {tab === 'yoon' && (
-        <div className="space-y-4">
-          <p className="text-sm text-[#5A606B] dark:text-[#9BA1AE]">
-            Se forman uniendo una sílaba terminada en <strong>i</strong> con <strong>ゃ (ya), ゅ (yu) o ょ (yo)</strong> en tamaño pequeño. Se pronuncian en un solo golpe de voz.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {YOON_ROWS.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-3 gap-2">
-                {row.map((cell) => (
-                  <button
-                    key={cell.kana}
-                    type="button"
-                    onClick={() => handleSpeak(cell)}
-                    className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                      selected.kana === cell.kana
-                        ? 'bg-[#C9372C]/10 border-[#C9372C]'
-                        : 'bg-white dark:bg-[#171A21] border-[#DFD9CD] dark:border-[#252A34] hover:border-[#C9372C]/60'
-                    }`}
-                  >
-                    <div className="text-xl sm:text-2xl font-semibold text-[#1A1D21] dark:text-[#F2EFE9]">
-                      {cell.kana}
-                    </div>
-                    <div className="text-xs font-mono text-[#5A606B] dark:text-[#9BA1AE] mt-0.5">{cell.romaji}</div>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-            {tab === 'rules' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#171A21] border border-[#DFD9CD] dark:border-[#252A34] space-y-2">
-            <h3 className="font-semibold text-base text-[#1A1D21] dark:text-[#F2EFE9]">
-              1. Partículas con lectura especial (は・へ・を)
-            </h3>
-            <ul className="text-sm text-[#5A606B] dark:text-[#9BA1AE] space-y-1.5 list-disc pl-5">
-              <li>
-                <strong>は (ha) → se lee «wa»</strong> cuando marca el tema de la oración (ej. わたし<strong>は</strong>).
-              </li>
-              <li>
-                <strong>へ (he) → se lee «e»</strong> cuando indica dirección hacia un lugar (ej. がっこう<strong>へ</strong>).
-              </li>
-              <li>
-                <strong>を (wo) → se lee «o»</strong> cuando marca el objeto directo (ej. みず<strong>を</strong>のみます).
-              </li>
-            </ul>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#171A21] border border-[#DFD9CD] dark:border-[#252A34] space-y-2">
-            <h3 className="font-semibold text-base text-[#1A1D21] dark:text-[#F2EFE9]">
-              2. Doble consonante (っ pequeña) y vocales largas
-            </h3>
-            <ul className="text-sm text-[#5A606B] dark:text-[#9BA1AE] space-y-1.5 list-disc pl-5">
-              <li>
-                <strong>っ (tsu pequeña):</strong> Duplica la consonante siguiente haciendo una breve pausa (ej. き<strong>っ</strong>て = <em>kitte</em>, sello).
-              </li>
-              <li>
-                <strong>Vocales alargadas:</strong> La <strong>o</strong> se alarga con <strong>う</strong> (ひこ<strong>う</strong>き = <em>hikōki</em>) y la <strong>e</strong> con <strong>い</strong> (とけ<strong>い</strong> = <em>tokei</em>).
-              </li>
-              <li>
-                <strong>Sonidos diferentes:</strong> No existen <em>si, ti, tu</em>; en su lugar se usan <strong>し (shi), ち (chi), つ (tsu)</strong>.
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 }
+[#9BA1AE] hover:text-[#1A1D21] dark:hover:text-[#F2EFE9]'
+            }`}
+          >
+            Katakana (カタカナ)
+          </button>
+        </div>
+      </div>
