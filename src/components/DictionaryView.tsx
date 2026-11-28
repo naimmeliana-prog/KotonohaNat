@@ -44,13 +44,37 @@ export function DictionaryView({ user, onRefreshDashboard, onRequireAuth }: Dict
         source: source || undefined,
         tag: tag || undefined,
       })
-        .then((res) => {
+          .then((res) => {
           if (!active) return;
-          setEntries(res.entries);
-          setSources(res.sources);
-          setTags(res.tags);
+
+          const q = queryText.trim().toLowerCase();
+          const localesFiltrados = DICCIONARIOS_LIBROS.filter((item) => {
+            const matchLevel = level === 'ALL' || item.jlptLevel === level;
+            const matchSource = !source || item.dictionarySource === source;
+            const matchTag = !tag || item.tags.includes(tag);
+            const matchQuery =
+              !q ||
+              item.word.toLowerCase().includes(q) ||
+              item.reading.toLowerCase().includes(q) ||
+              item.romaji.toLowerCase().includes(q) ||
+              item.meaningEs.toLowerCase().includes(q);
+            return matchLevel && matchSource && matchTag && matchQuery;
+          });
+
+          const combinados = [...res.entries, ...localesFiltrados];
+          const fuentesCombinadas = Array.from(
+            new Set([...res.sources, ...DICCIONARIOS_LIBROS.map((i) => i.dictionarySource)])
+          );
+          const tagsCombinados = Array.from(
+            new Set([...res.tags, ...DICCIONARIOS_LIBROS.flatMap((i) => i.tags)])
+          );
+
+          setEntries(combinados);
+          setSources(fuentesCombinadas);
+          setTags(tagsCombinados);
           setVisibleCount(PAGE_SIZE);
         })
+
         .catch((err) => {
           if (!active) return;
           setError(err instanceof Error ? err.message : d.loadError);
