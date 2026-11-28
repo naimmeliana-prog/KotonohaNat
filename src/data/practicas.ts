@@ -520,4 +520,150 @@ export const expresionesSuplementoData: ExpresionSuplemento[] = [
   { id: 'exp-10', categoria: 'Emergencias y Viajes', japones: '英語かスペイン語を話せますか', romaji: 'Eigo ka Supeingo o hanasemasu ka', espanol: '¿Habla inglés o español?', contexto: 'Pedir ayuda lingüística' },
   { id: 'exp-11', categoria: 'Expresiones Cotidianas', japones: 'お疲れ様でした', romaji: 'Otsukaresama deshita', espanol: 'Buen trabajo / Gracias por tu esfuerzo', contexto: 'Al terminar el trabajo o estudio' },
   { id: 'exp-12', categoria: 'Expresiones Cotidianas', japones: '気をつけて', romaji: 'Ki o tsukete', espanol: 'Cuídate / Ten cuidado', contexto: 'Despedida afectuosa o de viaje' }
+    // ================= SUPLEMENTO: NOCIONES BÁSICAS (CARDONA GRANDA) =================
+  {
+    id: 'nb-1',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'あの雲は人の顔のようですね。',
+    romaji: 'Ano kumo wa hito no kao no yō desu ne.',
+    espanol: 'Esa nube parece la cara de una persona, ¿no?',
+    contexto: 'Expresión de apariencia 〜ようだ (semejanza visual)'
+  },
+  {
+    id: 'nb-2',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'あの人は日本語を日本人のように上手に話します。',
+    romaji: 'Ano hito wa nihongo o nihonjin no yō ni jōzu ni hanashimasu.',
+    espanol: 'Él habla japonés tan bien como un nativo.',
+    contexto: 'Expresión de modo/semejanza 〜のように'
+  },
+  {
+    id: 'nb-3',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'あなたはお母さんに顔がよく似ていますね。',
+    romaji: 'Anata wa okāsan ni kao ga yoku nite imasu ne.',
+    espanol: 'Te pareces mucho de cara a tu madre.',
+    contexto: 'Parecido físico o de carácter 〜に似ている'
+  },
+  {
+    id: 'nb-4',
+    categoria: 'Expresiones Cotidianas',
+    japones: '今日は春みたいに暖かい。',
+    romaji: 'Kyō wa haru mitai ni atatakai.',
+    espanol: 'Hoy hace calor como en primavera.',
+    contexto: 'Comparación coloquial 〜みたいだ'
+  },
+  {
+    id: 'nb-5',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'レストレポさんも行くらしいです。',
+    romaji: 'Restrepo-san mo iku rashii desu.',
+    espanol: 'Parece que el señor Restrepo también va a ir.',
+    contexto: 'Conjetura o rumor 〜らしい (menor certeza)'
+  },
+  {
+    id: 'nb-6',
+    categoria: 'Expresiones Cotidianas',
+    japones: '自分の部屋の掃除をするべきです。',
+    romaji: 'Jibun no heya no sōji o suru beki desu.',
+    espanol: 'Deberías limpiar tu propia habitación.',
+    contexto: 'Deber moral o recomendación fuerte 〜べき'
+  },
+  {
+    id: 'nb-7',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'この漢字はもう習ったのだから、読めるはずですよ。',
+    romaji: 'Kono kanji wa mō naratta no dakara, yomeru hazu desu yo.',
+    espanol: 'Como ya has estudiado este kanji, deberías saber leerlo.',
+    contexto: 'Expectativa lógica 〜はず (es de esperar que)'
+  },
+  {
+    id: 'nb-8',
+    categoria: 'Emergencias y Viajes',
+    japones: 'この道を真っ直ぐ行けば、大通りに出るはずです。',
+    romaji: 'Kono michi o massugu ikeba, ōdori ni deru hazu desu.',
+    espanol: 'Si sigue recto por esta calle, debe salir a una avenida.',
+    contexto: 'Indicaciones de dirección con 〜はず'
+  },
+  {
+    id: 'nb-9',
+    categoria: 'Emergencias y Viajes',
+    japones: 'あなたのお家は駅からどうやって行くのですか。',
+    romaji: 'Anata no uchi wa eki kara dōyatte iku no desu ka.',
+    espanol: '¿Cómo se va desde la estación hasta su casa?',
+    contexto: 'Preguntar cómo llegar (どうやって)'
+  },
+  {
+    id: 'nb-10',
+    categoria: 'Saludos y Cortesía',
+    japones: 'どのくらい日本語を習っていますか。',
+    romaji: 'Dono kurai nihongo o naratte imasu ka.',
+    espanol: '¿Cuánto tiempo hace que estudias japonés?',
+    contexto: 'Conversación inicial (どのくらい - cuánto tiempo/cantidad)'
+  },
+  {
+    id: 'nb-11',
+    categoria: 'Saludos y Cortesía',
+    japones: 'そちらさまはもう一杯いかがですか。',
+    romaji: 'Sochira-sama wa mō ippai ikaga desu ka.',
+    espanol: '¿Desea usted otra copa?',
+    contexto: 'Trato muy cortés hacia un invitado (そちらさま)'
+  },
+  {
+    id: 'nb-12',
+    categoria: 'Saludos y Cortesía',
+    japones: 'あの方はどなたさまですか。',
+    romaji: 'Ano kata wa donata-sama desu ka.',
+    espanol: '¿Quién es ese señor / esa señora?',
+    contexto: 'Pregunta formal por una persona'
+  },
+  {
+    id: 'nb-13',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'この言葉は漢字でどのように書きますか。',
+    romaji: 'Kono kotoba wa kanji de dono yō ni kakimasu ka.',
+    espanol: '¿Cómo se escribe esta palabra en kanji?',
+    contexto: 'Pregunta útil en clase de japonés'
+  },
+  {
+    id: 'nb-14',
+    categoria: 'Expresiones Cotidianas',
+    japones: '分からないことは何でも先生に聞きなさい。',
+    romaji: 'Wakaranai koto wa nandemo sensei ni kikinasai.',
+    espanol: 'Pregúntale al profesor cualquier cosa que no entiendas.',
+    contexto: 'Pronombre indefinido 何でも (lo que sea)'
+  },
+  {
+    id: 'nb-15',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'この町はごみだらけになってしまった。',
+    romaji: 'Kono machi wa gomi-darake ni natte shimatta.',
+    espanol: 'Esta ciudad se ha llenado de basura.',
+    contexto: 'Sufijo 〜だらけ (repleto de algo negativo)'
+  },
+  {
+    id: 'nb-16',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'どうしてかしら。あの人の顔を思い出せないのよ。',
+    romaji: 'Dōshite kashira. Ano hito no kao o omoidasenai no yo.',
+    espanol: '¿Por qué será que no logro acordarme de la cara de esa persona?',
+    contexto: 'Registro femenino suave (かしら / のよ)'
+  },
+  {
+    id: 'nb-17',
+    categoria: 'Expresiones Cotidianas',
+    japones: 'あそこに座っている若い女性は娘です。',
+    romaji: 'Asoko ni suwatte iru wakai josei wa musume desu.',
+    espanol: 'La jovencita que está sentada allá es mi hija.',
+    contexto: 'Oración de relativo (el modificador precede al sustantivo)'
+  },
+  {
+    id: 'nb-18',
+    categoria: 'En la Mesa y Tiendas',
+    japones: '私はすしが好きです。',
+    romaji: 'Watashi wa sushi ga suki desu.',
+    espanol: 'Me gusta el sushi.',
+    contexto: 'Estructura de gustos con は (tema) + が (objeto de agrado)'
+  }
+
 ];
