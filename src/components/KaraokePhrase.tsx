@@ -94,10 +94,10 @@ interface KaraokePhraseProps {
   ja: string;
   es?: string;
   isPlaying: boolean;
-  durationMs?: number;
+  progress?: number;
 }
 
-export function KaraokePhrase({ ja, es = '', isPlaying, durationMs }: KaraokePhraseProps) {
+export function KaraokePhrase({ ja, es = '', isPlaying, progress = 0 }: KaraokePhraseProps) {
   const [pairs, setPairs] = useState<WordPair[]>(() => buildInitialPairs(ja, es));
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -126,34 +126,21 @@ export function KaraokePhrase({ ja, es = '', isPlaying, durationMs }: KaraokePhr
   }, [ja, es]);
 
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || progress <= 0 || progress >= 1) {
       setActiveIndex(-1);
       return;
     }
 
     const totalChars = pairs.reduce((acc, p) => acc + Math.max(1, p.ja.length), 0);
-    const estimatedTotalMs = durationMs || Math.max(1400, totalChars * 230);
-    let elapsed = 0;
-    const stepMs = 60;
-
-    const timer = window.setInterval(() => {
-      elapsed += stepMs;
-      const ratio = Math.min(0.999, elapsed / estimatedTotalMs);
-      let acc = 0;
-      for (let i = 0; i < pairs.length; i++) {
-        acc += Math.max(1, pairs[i].ja.length) / totalChars;
-        if (ratio <= acc) {
-          setActiveIndex(i);
-          break;
-        }
+    let acc = 0;
+    for (let i = 0; i < pairs.length; i++) {
+      acc += Math.max(1, pairs[i].ja.length) / totalChars;
+      if (progress <= acc) {
+        setActiveIndex(i);
+        break;
       }
-      if (elapsed >= estimatedTotalMs) {
-        window.clearInterval(timer);
-      }
-    }, stepMs);
-
-    return () => window.clearInterval(timer);
-  }, [isPlaying, pairs, durationMs]);
+    }
+  }, [isPlaying, progress, pairs]);
 
   const highlighted = hoveredIndex !== null ? hoveredIndex : activeIndex;
 
